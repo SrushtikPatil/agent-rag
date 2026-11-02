@@ -1,0 +1,26 @@
+# Environment & Secrets (NEVER push API keys)
+.env
+*.env
+
+# Python bytecode
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyd
+
+# Virtual Environments
+venv/
+env/
+.venv/
+
+# SQLite Database (generated automatically on first run)
+*.db
+*.sqlite3
+
+# OS metadata
+.DS_Store
+Thumbs.db
+
+# Temp uploads
+tmp/
+*.tmp

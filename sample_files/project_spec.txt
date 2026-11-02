@@ -1,0 +1,4 @@
+Project Phoenix: Multimodal AI Architecture Blueprint
+Key Objective: Integrate Google Gemini 1.5 Pro with ChromaDB and SQLite memory.
+Target Launch Date: Q4 2026.
+Team Leads: Aarav (AI Systems), Priya (Product), Rohan (DevOps).
