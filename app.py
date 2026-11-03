@@ -391,13 +391,27 @@ st.markdown("""
     }
     div[data-testid="stChatInput"] textarea {
         padding-left: 48px !important;
+        text-decoration: none !important;
+        -webkit-text-decorations-in-effect: none !important;
+        text-decoration-line: none !important;
+        caret-color: #0284c7 !important;
     }
     div[data-testid="stChatInput"] button {
         color: #0284c7 !important;
     }
 
-    /* Executive Microphone Button Inside Search/Chat Bar (Left Side) */
-    div[data-testid="stChatInput"] div:has(> button[data-testid="stChatInputMicButton"]),
+    /* Completely Remove Any Red Background, Red Borders, or Error Coloring from Chat Input and Microphone */
+    div[data-testid="stChatInput"] [data-testid="stTooltipErrorHoverTarget"],
+    div[data-testid="stChatInput"] .stTooltipErrorHoverTarget,
+    div[data-testid="stChatInput"] div:has(button[data-testid="stChatInputMicButton"]),
+    div[data-testid="stChatInput"] div:has([data-testid="stChatInputMicButton"]) {
+        background: transparent !important;
+        background-color: transparent !important;
+        border: none !important;
+        box-shadow: none !important;
+    }
+
+    /* Executive Microphone Button Inside Search/Chat Bar (Left Side) - Strict Light Blue */
     div[data-testid="stChatInput"] button[data-testid="stChatInputMicButton"] {
         position: absolute !important;
         left: 10px !important;
@@ -406,20 +420,40 @@ st.markdown("""
         margin: 0 !important;
         color: #0284c7 !important;
         background: #f0f9ff !important;
-        border: 1px solid #bae6fd !important;
+        background-color: #f0f9ff !important;
+        border: 1.5px solid #bae6fd !important;
         border-radius: 50% !important;
+        width: 32px !important;
+        height: 32px !important;
+        min-width: 32px !important;
+        min-height: 32px !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        justify-content: center !important;
         transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
         box-shadow: 0 1px 3px rgba(2, 132, 199, 0.12) !important;
     }
-    button[data-testid="stChatInputMicButton"]:hover {
+    div[data-testid="stChatInput"] button[data-testid="stChatInputMicButton"]:hover {
         background: #e0f2fe !important;
+        background-color: #e0f2fe !important;
         color: #0369a1 !important;
         border-color: #0284c7 !important;
-        transform: scale(1.1) !important;
+        transform: scale(1.08) !important;
     }
-    button[data-testid="stChatInputMicButton"] svg {
+    div[data-testid="stChatInput"] button[data-testid="stChatInputMicButton"]:active,
+    div[data-testid="stChatInput"] button[data-testid="stChatInputMicButton"]:focus {
+        background: #e0f2fe !important;
+        background-color: #e0f2fe !important;
+        outline: none !important;
+    }
+
+    /* Never show red icons or red backgrounds even in error, disabled, or recording state */
+    div[data-testid="stChatInput"] button[data-testid="stChatInputMicButton"] svg,
+    div[data-testid="stChatInput"] button[data-testid="stChatInputMicButton"] * {
         fill: #0284c7 !important;
+        color: #0284c7 !important;
     }
+
     button[data-testid="stChatInputSubmitButton"] {
         color: #0284c7 !important;
     }
