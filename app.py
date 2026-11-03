@@ -677,8 +677,17 @@ with st.sidebar:
                 on_change=on_api_key_update,
                 label_visibility="collapsed"
             )
-            if st.session_state.api_key:
-                st.caption("Active · High Quota Multi-Model Pool")
+            key_val = (st.session_state.api_key or "").strip()
+            if key_val.startswith("AIzaSy"):
+                st.caption("🟢 Live Google Cloud Gemini API Active")
+            elif key_val.startswith("AQ."):
+                st.caption("ℹ️ AGY internal token detected. Operating with Agent Rag Multimodal Engine.")
+                st.markdown("<div style='font-size:0.75rem;'><a href='https://aistudio.google.com/app/apikey' target='_blank' style='color:#0284c7; text-decoration:none;'>👉 Get official free Gemini API Key (AIzaSy...)</a></div>", unsafe_allow_html=True)
+            elif key_val:
+                st.caption("🟢 API Key Configured")
+            else:
+                st.caption("💡 Operating with Agent Rag Multimodal Engine.")
+                st.markdown("<div style='font-size:0.75rem;'><a href='https://aistudio.google.com/app/apikey' target='_blank' style='color:#0284c7; text-decoration:none;'>👉 Get official free Gemini API Key</a></div>", unsafe_allow_html=True)
 
 # ---------------------------------------------------------------------------
 # Main Canvas
