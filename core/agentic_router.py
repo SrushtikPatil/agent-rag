@@ -44,8 +44,8 @@ class AgenticAssistant:
 
     def classify_intent(self, query: str, file_type: Optional[str], mode: str = "auto") -> str:
         """
-        Determines which engine should handle the query with intelligent priority.
-        Personal & Festive queries are prioritized when relevant.
+        Determines which engine should handle the query.
+        When a document, video, or data file is attached, the searching bar is FIRMLY ATTACHED to the document!
         """
         if mode == "doc_qa" and file_type:
             return "STRUCTURED_DATA" if file_type in ["excel", "csv"] else "MULTIMODAL_RAG"
@@ -54,35 +54,42 @@ class AgenticAssistant:
         elif mode == "general":
             return "GENERAL_CHAT"
 
-        q_lower = query.lower()
+        q_lower = query.lower().strip()
 
-        # 1. Personal & Festive Triggers (ALWAYS high priority, even if document is uploaded)
-        personal_keywords = [
-            "diwali", "holi", "eid", "festival", "festive", "navratri", "dussehra",
-            "birthday", "anniversary", "wish", "wishes", "quote", "quotes", "greet", "greeting",
-            "reminder", "remind me", "friend", "rohan", "priya", "how was my day", "yesterday",
-            "recap", "calendar", "milestone"
+        # Pure standalone greetings (only when NO file is attached)
+        if not file_type and q_lower in ["hi", "hello", "hey", "hlo", "hii", "who are you"]:
+            return "GENERAL_CHAT"
+
+        # Explicit Indian Festival / Calendar triggers (e.g. "when is diwali", "upcoming birthdays")
+        explicit_personal = [
+            "diwali", "holi", "eid", "navratri", "dussehra", "bhai dooj", "dhanteras",
+            "birthday", "anniversary", "friend", "rohan", "priya", "how was my day", "yesterday recap",
+            "calendar", "milestones"
         ]
-        if any(w in q_lower for w in personal_keywords):
+        is_personal = any(w in q_lower for w in explicit_personal)
+        has_doc_keywords = any(w in q_lower for w in [
+            "summary", "summarize", "document", "video", "audio", "pdf", "file",
+            "attached", "takeaways", "notes", "point", "points", "explain", "important",
+            "what is this", "tell me about", "exam", "concepts", "key"
+        ])
+
+        # If it's a genuine festival/calendar query without referring to a document
+        if is_personal and not has_doc_keywords and not file_type:
             return "PERSONAL_MEMORY"
 
-        # 2. Document & Spreadsheet Specific Triggers
-        doc_keywords = [
-            "summarize", "summary", "document", "pdf", "file", "page", "chapter",
-            "what does this say", "extract", "topics", "key points", "audio", "video",
-            "timestamp", "image", "chart", "diagram", "table", "calculate", "average", "rows"
-        ]
-
+        # -------------------------------------------------------------
+        # IF A DOCUMENT OR FILE IS ATTACHED:
+        # The searching bar is ATTACHED TO THE ATTACHED FILE!
+        # -------------------------------------------------------------
         if file_type:
             if file_type in ["excel", "csv"]:
-                # If an excel file is active, math/data queries go to structured data
-                calc_words = ["sum", "total", "average", "mean", "median", "max", "min", "column", "row", "calculate", "chart", "filter"]
-                if any(w in q_lower for w in calc_words) or any(w in q_lower for w in doc_keywords):
-                    return "STRUCTURED_DATA"
-            elif any(w in q_lower for w in doc_keywords):
+                return "STRUCTURED_DATA"
+            else:
                 return "MULTIMODAL_RAG"
 
-        # 3. Default to General Chat if question doesn't specifically target the document
+        if is_personal:
+            return "PERSONAL_MEMORY"
+
         return "GENERAL_CHAT"
 
     def handle_personal_memory(self, query: str, user_id: str, user_name: str) -> str:
@@ -126,7 +133,7 @@ class AgenticAssistant:
         # If API key is available, generate dynamic response with Gemini
         context_blocks = []
         if festivals:
-            fest_names = ", ".join([f"{f['festival_name']} (in {f['days_remaining']} days)" for f in festivals])
+            fest_names = ", ".join([f"{f.get('name') or f.get('festival_name')} (in {f['days_remaining']} days)" for f in festivals])
             context_blocks.append(f"Upcoming Festivals: {fest_names}")
         if contacts:
             cont_str = ", ".join([f"{c['contact_name']} ({c['event_type']} in {c['days_remaining']} days)" for c in contacts])

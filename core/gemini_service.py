@@ -205,16 +205,38 @@ class GeminiService:
 
         # 3. Audio / Video Handler
         elif file_type in ["audio", "video"]:
+            try:
+                uploaded_file = self.client.upload_file(path=file_path)
+                # Wait for video processing if video
+                if file_type == "video":
+                    import time
+                    for _ in range(30):
+                        if uploaded_file.state.name == "ACTIVE":
+                            break
+                        elif uploaded_file.state.name == "FAILED":
+                            return "⚠️ Google servers could not process this video file. Please ensure it has standard H.264/AAC encoding."
+                        time.sleep(2)
+                        uploaded_file = self.client.get_file(uploaded_file.name)
+            except Exception as e:
+                return self._format_error(e)
+
+            instruction = (
+                f"You are an expert video and multimedia analyst examining '{os.path.basename(file_path)}'.\n\n"
+                f"USER REQUEST: {user_prompt}\n\n"
+                "INSTRUCTIONS:\n"
+                "- Directly answer the user request based on the actual audio and visual content of the media.\n"
+                "- Provide clear, structured bullet points and cite relevant timestamps [MM:SS] where applicable.\n"
+                "- Be comprehensive, insightful, and concise."
+            )
+
             for m_name in PREFERRED_MODELS:
                 try:
                     model = self.client.GenerativeModel(m_name)
-                    uploaded_file = self.client.upload_file(path=file_path)
-                    instruction = f"{user_prompt}\n\nNote: Cite timestamps [MM:SS]."
                     response = model.generate_content([instruction, uploaded_file])
                     return response.text
                 except Exception as e:
                     err_str = str(e)
-                    if "404" in err_str or "429" in err_str:
+                    if "404" in err_str or "429" in err_str or "quota" in err_str.lower():
                         continue
                     return self._format_error(e)
 

@@ -810,7 +810,14 @@ for msg in st.session_state.messages:
 # ---------------------------------------------------------------------------
 # Integrated Bottom Chat Input (With Built-in Mic on Left Side)
 # ---------------------------------------------------------------------------
-chat_val = st.chat_input("Message Agent Rag or speak using the mic...", accept_audio=True)
+if st.session_state.active_file:
+    f_name = st.session_state.active_file['name']
+    short_name = f_name if len(f_name) <= 26 else f_name[:24] + "..."
+    chat_placeholder = f"Ask about '{short_name}' or speak with mic..."
+else:
+    chat_placeholder = "Message Agent Rag or speak using the mic..."
+
+chat_val = st.chat_input(chat_placeholder, accept_audio=True)
 
 user_query = None
 is_voice = False
