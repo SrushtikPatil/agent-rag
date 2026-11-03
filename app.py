@@ -124,10 +124,22 @@ st.markdown("""
     }
     
     /* Main container clean spacing */
-    .block-container {
+    div[data-testid="stMainBlockContainer"],
+    .block-container:not([data-testid="stBottomBlockContainer"]) {
         padding-top: 2rem !important;
         padding-bottom: 5rem !important;
         max-width: 880px !important;
+    }
+
+    /* Fixed Bottom Chat Container - Clean Alignment that never overlaps with Sidebar */
+    div[data-testid="stBottom"] {
+        background: transparent !important;
+        z-index: 80 !important;
+    }
+    div[data-testid="stBottomBlockContainer"] {
+        max-width: 880px !important;
+        padding-top: 0.5rem !important;
+        padding-bottom: 1.2rem !important;
     }
 
     /* Executive Hero Greeting */
@@ -288,7 +300,7 @@ st.markdown("""
     section[data-testid="stSidebar"] {
         background: linear-gradient(180deg, #f0f9ff 0%, #f8fafc 100%) !important;
         border-right: 1px solid #bae6fd !important;
-        position: fixed !important;
+        z-index: 100 !important;
     }
     div[data-testid="stSidebarContent"] {
         position: relative !important;
