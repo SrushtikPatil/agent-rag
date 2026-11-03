@@ -392,6 +392,32 @@ st.markdown("""
         color: #0284c7 !important;
     }
 
+    /* Executive Microphone Button Inside Search/Chat Bar (Left Side) */
+    button[data-testid="stChatInputMicButton"] {
+        color: #0284c7 !important;
+        background: #f0f9ff !important;
+        border: 1px solid #bae6fd !important;
+        border-radius: 50% !important;
+        margin-right: 6px !important;
+        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+        box-shadow: 0 1px 3px rgba(2, 132, 199, 0.12) !important;
+    }
+    button[data-testid="stChatInputMicButton"]:hover {
+        background: #e0f2fe !important;
+        color: #0369a1 !important;
+        border-color: #0284c7 !important;
+        transform: scale(1.1) !important;
+    }
+    button[data-testid="stChatInputMicButton"] svg {
+        fill: #0284c7 !important;
+    }
+    button[data-testid="stChatInputSubmitButton"] {
+        color: #0284c7 !important;
+    }
+    button[data-testid="stChatInputSubmitButton"]:hover {
+        color: #0369a1 !important;
+    }
+
     /* Inline Code & Badges */
     code {
         color: #0369a1 !important;
@@ -434,6 +460,46 @@ st.markdown("""
         border-radius: 10px;
         border: 1px solid #bae6fd;
         margin-bottom: 6px;
+    }
+
+    /* Mobile & Tablet Responsive Optimizations (Show same clean UI on mobile devices) */
+    @media (max-width: 768px) {
+        .block-container {
+            padding-top: 1.2rem !important;
+            padding-bottom: 4.5rem !important;
+            padding-left: 0.8rem !important;
+            padding-right: 0.8rem !important;
+        }
+        .hero-title {
+            font-size: 1.7rem !important;
+            line-height: 1.25 !important;
+        }
+        .hero-subtitle {
+            font-size: 0.92rem !important;
+            margin-bottom: 14px !important;
+        }
+        div[data-testid="stBottomBlockContainer"] {
+            padding-left: 0.6rem !important;
+            padding-right: 0.6rem !important;
+            padding-bottom: 0.8rem !important;
+        }
+        div[data-testid="stChatInput"] {
+            border-radius: 22px !important;
+        }
+        button[data-testid="stExpandSidebarButton"] {
+            top: 8px !important;
+            left: 8px !important;
+            padding: 8px 12px !important;
+            font-size: 1.1rem !important;
+        }
+        div[data-testid="stChatMessage"] {
+            padding: 12px 14px !important;
+            border-radius: 12px !important;
+        }
+        .festival-pill, .birthday-pill {
+            font-size: 0.78rem !important;
+            padding: 4px 10px !important;
+        }
     }
 </style>
 """, unsafe_allow_html=True)
@@ -705,58 +771,49 @@ for msg in st.session_state.messages:
             """, unsafe_allow_html=True)
 
 # ---------------------------------------------------------------------------
-# Voice Microphone Input & Bottom Chat Input
+# Integrated Bottom Chat Input (With Built-in Mic on Left Side)
 # ---------------------------------------------------------------------------
-voice_query = None
+chat_val = st.chat_input("Message Agent Rag or speak using the mic...", accept_audio=True)
 
-# Voice Mic Expander - Executive Light-Blue Card
-with st.expander("🎙️ **Voice Mic — Speak to Agent Rag**", expanded=False):
-    st.markdown("""
-    <div style="font-size: 0.83rem; color: #0369a1; margin-bottom: 8px;">
-        Click the <b>Microphone</b> button below, speak clearly, and tap stop. Agent Rag will automatically transcribe your voice and answer!
-    </div>
-    """, unsafe_allow_html=True)
-    
-    audio_record = st.audio_input(
-        "Speak to Agent Rag",
-        key="voice_mic_recorder",
-        label_visibility="collapsed"
-    )
+user_query = None
+is_voice = False
 
-    if audio_record is not None:
-        raw_audio_bytes = audio_record.read()
-        audio_hash = hash(raw_audio_bytes)
-        if st.session_state.get("last_processed_audio_hash") != audio_hash:
-            st.session_state.last_processed_audio_hash = audio_hash
+if chat_val:
+    if isinstance(chat_val, str):
+        user_query = chat_val.strip()
+    elif hasattr(chat_val, "get"):
+        audio_file = chat_val.get("audio")
+        text_val = chat_val.get("text")
+        if audio_file is not None:
+            raw_audio_bytes = audio_file.read()
             with st.spinner("🎧 Transcribing your voice..."):
                 transcribed_text = st.session_state.assistant.gemini.transcribe_audio_bytes(raw_audio_bytes)
                 if transcribed_text:
-                    voice_query = transcribed_text
-                    st.success(f"🎙️ **Transcribed:** \"{transcribed_text}\"")
+                    user_query = transcribed_text
+                    is_voice = True
                 else:
                     st.warning("Could not detect clear speech. Please speak closer to the microphone and try again!")
+        elif text_val:
+            user_query = text_val.strip()
+elif preset_action:
+    user_query = preset_action.strip()
 
-# Primary Chat Input (Accepts keyboard, voice transcription, or starter chips)
-chat_input = st.chat_input("Message Agent Rag or speak using the mic above...")
-active_input = chat_input or voice_query or preset_action
-
-if active_input:
+if user_query:
     # 1. User Message (tag voice-spoken prompts with a clean indicator)
-    is_voice = bool(voice_query)
-    user_display = f"🎙️ {active_input}" if is_voice else active_input
+    user_display = f"🎙️ {user_query}" if is_voice else user_query
 
     st.session_state.messages.append({"role": "user", "content": user_display})
     with st.chat_message("user", avatar="👤"):
         if is_voice:
             st.markdown('<div class="voice-badge"><span>🎙️</span> Spoken via Voice</div>', unsafe_allow_html=True)
-        st.markdown(active_input)
+        st.markdown(user_query)
 
     # 2. Assistant State Preparation
     f_info = st.session_state.active_file or {}
     state: AgentState = {
         "user_id": "usr_default",
         "user_name": user_name,
-        "query": active_input,
+        "query": user_query,
         "attached_file_path": f_info.get("path"),
         "attached_file_type": f_info.get("type"),
         "active_dataframe": st.session_state.active_df,
