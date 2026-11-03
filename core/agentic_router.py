@@ -188,8 +188,36 @@ class AgenticAssistant:
             output = self.handle_personal_memory(query, user_id, user_name)
 
         else: # GENERAL_CHAT
-            system_inst = "You are Agent Rag, an intelligent personal multimodal agentic assistant. You are helpful, articulate, professional, and knowledgeable."
-            output = self.gemini.generate_chat_response(query, system_instruction=system_inst)
+            clean_q = query.strip().lower().rstrip("!.?,")
+            greetings = [
+                "hi", "hello", "hey", "hlo", "hii", "hiii", "helo", "greeting", "greetings",
+                "hello agent rag", "hi agent rag", "hey agent rag", "who are you", "what is your name",
+                "introduce yourself", "tell me about yourself"
+            ]
+            if clean_q in greetings:
+                output = "Hello! I am Agent Rag, your personal assistant. How can I help you today?"
+            else:
+                system_inst = (
+                    "You are Agent Rag, your personal assistant. You are helpful, articulate, professional, and knowledgeable. "
+                    "Always refer to yourself simply as 'Agent Rag, your personal assistant'. Never use the words 'intelligent' or 'multimodal' in your greeting. "
+                    "If the user greets you or asks who you are, always reply exactly: 'Hello! I am Agent Rag, your personal assistant. How can I help you today?'"
+                )
+                output = self.gemini.generate_chat_response(query, system_instruction=system_inst)
+                
+                # Sanitize to guarantee the exact requested phrasing
+                output = output.replace(
+                    "Hello! I am Agent Rag, your intelligent personal multimodal assistant. How can I help you today?",
+                    "Hello! I am Agent Rag, your personal assistant. How can I help you today?"
+                ).replace(
+                    "intelligent personal multimodal assistant",
+                    "personal assistant"
+                ).replace(
+                    "intelligent personal multimodal agentic assistant",
+                    "personal assistant"
+                ).replace(
+                    "personal multimodal assistant",
+                    "personal assistant"
+                )
 
         # 3. Log interaction to SQLite
         try:

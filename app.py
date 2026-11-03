@@ -376,8 +376,9 @@ st.markdown("""
         box-shadow: 0 1px 4px rgba(2, 132, 199, 0.04) !important;
     }
 
-    /* Chat Input Bar - Polished Light Blue Ring */
+    /* Chat Input Bar - Polished Light Blue Ring with Mic on Left */
     div[data-testid="stChatInput"] {
+        position: relative !important;
         border-radius: 28px !important;
         border: 1.5px solid #bae6fd !important;
         background: #ffffff !important;
@@ -388,17 +389,25 @@ st.markdown("""
         border-color: #0284c7 !important;
         box-shadow: 0 4px 22px rgba(2, 132, 199, 0.22) !important;
     }
+    div[data-testid="stChatInput"] textarea {
+        padding-left: 48px !important;
+    }
     div[data-testid="stChatInput"] button {
         color: #0284c7 !important;
     }
 
     /* Executive Microphone Button Inside Search/Chat Bar (Left Side) */
-    button[data-testid="stChatInputMicButton"] {
+    div[data-testid="stChatInput"] div:has(> button[data-testid="stChatInputMicButton"]),
+    div[data-testid="stChatInput"] button[data-testid="stChatInputMicButton"] {
+        position: absolute !important;
+        left: 10px !important;
+        bottom: 7px !important;
+        z-index: 20 !important;
+        margin: 0 !important;
         color: #0284c7 !important;
         background: #f0f9ff !important;
         border: 1px solid #bae6fd !important;
         border-radius: 50% !important;
-        margin-right: 6px !important;
         transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
         box-shadow: 0 1px 3px rgba(2, 132, 199, 0.12) !important;
     }
