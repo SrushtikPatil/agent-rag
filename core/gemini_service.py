@@ -167,9 +167,14 @@ class GeminiService:
                         "but contains scanned images rather than selectable text."
                     )
 
-                doc_sample = full_text[:250000]
+                # Google Gemini 1.5 & Flash support a massive 1,000,000-token context window (~3.5M characters).
+                # Support 400-500+ pages of full academic/book text in a single prompt!
+                max_chars = 1500000
+                doc_sample = full_text[:max_chars]
+                doc_note = f" (Full {total_pages} pages processed)" if len(full_text) <= max_chars else f" (First {max_chars} characters of {total_pages} pages)"
+
                 prompt = (
-                    f"You are an expert academic and professional document analyst examining '{os.path.basename(file_path)}'.\n\n"
+                    f"You are an expert academic and professional document analyst examining '{os.path.basename(file_path)}'{doc_note}.\n\n"
                     f"Total Pages: {total_pages}\n\n"
                     f"DOCUMENT CONTENT EXTRACT:\n"
                     f"{doc_sample}\n\n"
