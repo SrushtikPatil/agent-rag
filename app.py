@@ -605,12 +605,6 @@ with st.sidebar:
                 st.session_state.file_uploader_key += 1
                 st.rerun()
 
-        st.markdown("""
-        <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 6px 10px; font-size: 0.76rem; color: #166534; display: flex; align-items: center; gap: 6px; font-weight: 600; margin-top: 10px;">
-            <span>🎙️</span> Voice Mic Ready
-        </div>
-        """, unsafe_allow_html=True)
-
     # Bottom Section: Firmly Pinned to the End Line of the Sidebar
     with st.container(key="sidebar_bottom_box"):
         st.divider()
