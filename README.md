@@ -18,14 +18,19 @@ Agent Rag combines proactive personal memory (Indian festivals & birthday tracki
 * **Relationship Reminders**: Tracks friends and family birthdays/anniversaries with instant ready-made wishing quotes in multiple tones (Professional, Warm, Casual).
 * **Dismissible Twin Notification Pills**: Side-by-side matching indicators on launch with 1-click dismiss (`✕`).
 
-### 3. 🧠 General Intelligence & Gen-Z Slang Coach
+### 3. 🎙️ Voice Microphone Input & Real-Time Audio Transcription
+* **Voice-First Interaction**: Integrated in-browser microphone recorder (`st.audio_input`) for hands-free queries and questions.
+* **Dual-Tier Audio Transcription**: Transcribes spoken audio into text using Google Gemini's multimodal audio capabilities, backed by an automatic free fallback to Google Speech Recognition (`SpeechRecognition`).
+* **Visual Voice Indicator**: Queries entered via microphone are visibly badged with `🎙️ Spoken via Voice` in the conversation history.
+
+### 4. 🧠 General Intelligence & Gen-Z Slang Coach
 * **Full-Spectrum Conversational AI**: Functions like ChatGPT and Gemini for coding, writing, research, and technical Q&A.
 * **Gen-Z Slang & Meme Decoder**: Explains internet slang (`rizz`, `no cap`, `delulu`, `ate and left no crumbs`) and decodes counter-intuitive meme emojis (`💀`, `😭`, `🧢`, `🗿`, `💅`, `📉`).
 
-### 4. ⚡ High-Quota Multi-Model Pooling & Failover
+### 5. ⚡ High-Quota Multi-Model Pooling & Failover
 * Auto-cascading architecture (`gemini-flash-lite-latest`, `gemini-3.1-flash-lite`, `gemini-3.5-flash-lite`, etc.) that automatically recovers from `429 ResourceExhausted` errors with zero user interruption.
 
-### 5. 🎨 Executive Light Blue UI
+### 6. 🎨 Executive Light Blue UI
 * Modern interface with smooth light-blue accents (`#f0f7ff`), custom cute 3D robot avatar, collapsible left sidebar with bottom-pinned settings, and responsive layout.
 
 ---

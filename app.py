@@ -389,6 +389,40 @@ st.markdown("""
         border: 1px solid #e0f2fe !important;
         font-size: 0.88em !important;
     }
+
+    /* Executive Voice Mic Widget Styling */
+    div[data-testid="stAudioInput"] {
+        background: #ffffff !important;
+        border: 1.5px solid #bae6fd !important;
+        border-radius: 14px !important;
+        padding: 6px 12px !important;
+        box-shadow: 0 1px 4px rgba(2, 132, 199, 0.05) !important;
+        transition: all 0.2s ease !important;
+    }
+    div[data-testid="stAudioInput"]:hover {
+        border-color: #0284c7 !important;
+        box-shadow: 0 3px 12px rgba(2, 132, 199, 0.12) !important;
+    }
+    div[data-testid="stAudioInput"] button {
+        border-radius: 50% !important;
+        transition: transform 0.15s ease !important;
+    }
+    div[data-testid="stAudioInput"] button:hover {
+        transform: scale(1.08) !important;
+    }
+    .voice-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        background: #e0f2fe;
+        color: #0369a1;
+        font-size: 0.74rem;
+        font-weight: 700;
+        padding: 2px 9px;
+        border-radius: 10px;
+        border: 1px solid #bae6fd;
+        margin-bottom: 6px;
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -397,6 +431,9 @@ st.markdown("""
 # ---------------------------------------------------------------------------
 if "messages" not in st.session_state:
     st.session_state.messages = []
+
+if "last_processed_audio_hash" not in st.session_state:
+    st.session_state.last_processed_audio_hash = None
 
 env_key = ""
 if os.path.exists(ENV_FILE):
@@ -489,6 +526,12 @@ with st.sidebar:
                 st.session_state.active_df = None
                 st.session_state.file_uploader_key += 1
                 st.rerun()
+
+        st.markdown("""
+        <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 6px 10px; font-size: 0.76rem; color: #166534; display: flex; align-items: center; gap: 6px; font-weight: 600; margin-top: 10px;">
+            <span>🎙️</span> Voice Mic Ready
+        </div>
+        """, unsafe_allow_html=True)
 
     # Bottom Section: Firmly Pinned to the End Line of the Sidebar
     with st.container(key="sidebar_bottom_box"):
@@ -650,22 +693,58 @@ for msg in st.session_state.messages:
             """, unsafe_allow_html=True)
 
 # ---------------------------------------------------------------------------
-# Bottom Chat Input
+# Voice Microphone Input & Bottom Chat Input
 # ---------------------------------------------------------------------------
-chat_input = st.chat_input("Message Agent Rag or ask about attached documents...") or preset_action
+voice_query = None
 
-if chat_input:
-    # 1. User Message
-    st.session_state.messages.append({"role": "user", "content": chat_input})
+# Voice Mic Expander - Executive Light-Blue Card
+with st.expander("🎙️ **Voice Mic — Speak to Agent Rag**", expanded=False):
+    st.markdown("""
+    <div style="font-size: 0.83rem; color: #0369a1; margin-bottom: 8px;">
+        Click the <b>Microphone</b> button below, speak clearly, and tap stop. Agent Rag will automatically transcribe your voice and answer!
+    </div>
+    """, unsafe_allow_html=True)
+    
+    audio_record = st.audio_input(
+        "Speak to Agent Rag",
+        key="voice_mic_recorder",
+        label_visibility="collapsed"
+    )
+
+    if audio_record is not None:
+        raw_audio_bytes = audio_record.read()
+        audio_hash = hash(raw_audio_bytes)
+        if st.session_state.get("last_processed_audio_hash") != audio_hash:
+            st.session_state.last_processed_audio_hash = audio_hash
+            with st.spinner("🎧 Transcribing your voice..."):
+                transcribed_text = st.session_state.assistant.gemini.transcribe_audio_bytes(raw_audio_bytes)
+                if transcribed_text:
+                    voice_query = transcribed_text
+                    st.success(f"🎙️ **Transcribed:** \"{transcribed_text}\"")
+                else:
+                    st.warning("Could not detect clear speech. Please speak closer to the microphone and try again!")
+
+# Primary Chat Input (Accepts keyboard, voice transcription, or starter chips)
+chat_input = st.chat_input("Message Agent Rag or speak using the mic above...")
+active_input = chat_input or voice_query or preset_action
+
+if active_input:
+    # 1. User Message (tag voice-spoken prompts with a clean indicator)
+    is_voice = bool(voice_query)
+    user_display = f"🎙️ {active_input}" if is_voice else active_input
+
+    st.session_state.messages.append({"role": "user", "content": user_display})
     with st.chat_message("user", avatar="👤"):
-        st.markdown(chat_input)
+        if is_voice:
+            st.markdown('<div class="voice-badge"><span>🎙️</span> Spoken via Voice</div>', unsafe_allow_html=True)
+        st.markdown(active_input)
 
     # 2. Assistant State Preparation
     f_info = st.session_state.active_file or {}
     state: AgentState = {
         "user_id": "usr_default",
         "user_name": user_name,
-        "query": chat_input,
+        "query": active_input,
         "attached_file_path": f_info.get("path"),
         "attached_file_type": f_info.get("type"),
         "active_dataframe": st.session_state.active_df,

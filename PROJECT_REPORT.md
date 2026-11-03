@@ -117,6 +117,14 @@ Agent Rag features specialized conversational capabilities capable of:
   * 📉 / 📈: Aura loss and aura gain quantification.
 * Translating formal or business English into modern internet vernacular and vice-versa.
 
+### 4.5 Hands-Free Voice Input & Dual-Engine Speech Transcription
+To empower voice-first conversational interaction:
+* **In-Browser Audio Recording**: Utilizes native HTML5 Web Audio streaming via Streamlit's `st.audio_input`, capturing 16,000 Hz single-channel `.wav` audio buffers directly from the user's microphone.
+* **Dual-Tier Audio Transcription**:
+  1. *Primary Engine*: Google Gemini Multimodal Audio analysis sending raw bytes directly via `{"mime_type": "audio/wav", "data": audio_bytes}`.
+  2. *Fallback Engine*: Google Speech Recognition via `SpeechRecognition` library, providing zero-config, free speech-to-text without requiring an active API key or quota.
+* **Visual Voice Attribution**: Questions spoken via microphone are tagged with a distinct `🎙️ Spoken via Voice` badge in the message stream to distinguish verbal queries from typed input.
+
 ---
 
 ## 5. Database Schema & Design

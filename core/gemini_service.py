@@ -227,3 +227,53 @@ class GeminiService:
                 return self.generate_chat_response(prompt)
             except Exception as e:
                 return self._format_error(e)
+
+    def transcribe_audio_bytes(self, audio_bytes: bytes, mime_type: str = "audio/wav") -> str:
+        """
+        Transcribes audio bytes to text using a robust multi-tier pipeline:
+        1. Primary: Google Gemini Multimodal Audio (high accuracy, context-aware).
+        2. Fallback: Google Speech Recognition (free, zero-config, works without API key).
+        """
+        if not audio_bytes or len(audio_bytes) < 100:
+            return ""
+
+        # Strategy 1: Google Gemini Multimodal (if configured)
+        if self.is_configured and self.client:
+            for m_name in PREFERRED_MODELS:
+                try:
+                    model = self.client.GenerativeModel(m_name)
+                    audio_part = {
+                        "mime_type": mime_type,
+                        "data": audio_bytes
+                    }
+                    prompt = (
+                        "Accurately transcribe the spoken words in this audio into clean text. "
+                        "Return ONLY the exact transcribed words, with proper punctuation, without any introductory phrases, filler, notes, or quotes."
+                    )
+                    response = model.generate_content([prompt, audio_part])
+                    if response and response.text:
+                        cleaned = response.text.strip().strip('"').strip("'")
+                        if cleaned:
+                            return cleaned
+                except Exception as e:
+                    err_str = str(e)
+                    if "404" in err_str or "429" in err_str or "quota" in err_str.lower():
+                        continue
+                    # Break out to speech_recognition fallback on key or format failure
+                    break
+
+        # Strategy 2: Google Speech Recognition Fallback (Free, zero-config, no API key needed)
+        try:
+            import speech_recognition as sr
+            import io
+            r = sr.Recognizer()
+            with sr.AudioFile(io.BytesIO(audio_bytes)) as source:
+                audio_data = r.record(source)
+                text = r.recognize_google(audio_data)
+                if text and text.strip():
+                    return text.strip()
+        except Exception:
+            # Silence detected, background noise, or no recognizable words
+            pass
+
+        return ""
