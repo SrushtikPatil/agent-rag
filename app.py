@@ -400,58 +400,97 @@ st.markdown("""
         color: #0284c7 !important;
     }
 
-    /* Completely Remove Any Red Background, Red Borders, or Error Coloring from Chat Input and Microphone */
+    /* Completely Remove Any Red Background, Red Borders, or Error Box from Chat Input and Microphone */
     div[data-testid="stChatInput"] [data-testid="stTooltipErrorHoverTarget"],
     div[data-testid="stChatInput"] .stTooltipErrorHoverTarget,
     div[data-testid="stChatInput"] div:has(button[data-testid="stChatInputMicButton"]),
-    div[data-testid="stChatInput"] div:has([data-testid="stChatInputMicButton"]) {
+    div[data-testid="stChatInput"] div:has([data-testid="stChatInputMicButton"]),
+    div[data-testid="stChatInput"] [class*="Tooltip"],
+    div[data-testid="stChatInput"] [class*="tooltip"],
+    div[data-testid="stChatInput"] [class*="HoverTarget"] {
         background: transparent !important;
         background-color: transparent !important;
         border: none !important;
+        outline: none !important;
         box-shadow: none !important;
+        padding: 0 !important;
+        margin: 0 !important;
     }
 
-    /* Executive Microphone Button Inside Search/Chat Bar (Left Side) - Strict Light Blue */
-    div[data-testid="stChatInput"] button[data-testid="stChatInputMicButton"] {
+    /* Executive Microphone Symbol Inside Search/Chat Bar (Left Side) - Pure Icon, No Box */
+    div[data-testid="stChatInput"] button[data-testid="stChatInputMicButton"],
+    div[data-testid="stChatInput"] [data-testid="stChatInputMicButton"],
+    div[data-testid="stChatInput"] button[aria-label*="record" i],
+    div[data-testid="stChatInput"] button[aria-label*="audio" i],
+    div[data-testid="stChatInput"] button[aria-label*="mic" i] {
         position: absolute !important;
-        left: 10px !important;
-        bottom: 7px !important;
+        left: 12px !important;
+        bottom: 8px !important;
         z-index: 20 !important;
         margin: 0 !important;
+        padding: 0 !important;
         color: #0284c7 !important;
-        background: #f0f9ff !important;
-        background-color: #f0f9ff !important;
-        border: 1.5px solid #bae6fd !important;
-        border-radius: 50% !important;
-        width: 32px !important;
-        height: 32px !important;
-        min-width: 32px !important;
-        min-height: 32px !important;
+        background: transparent !important;
+        background-color: transparent !important;
+        border: none !important;
+        outline: none !important;
+        box-shadow: none !important;
+        border-radius: 0 !important;
+        width: 28px !important;
+        height: 28px !important;
+        min-width: 28px !important;
+        min-height: 28px !important;
         display: inline-flex !important;
         align-items: center !important;
         justify-content: center !important;
-        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
-        box-shadow: 0 1px 3px rgba(2, 132, 199, 0.12) !important;
+        cursor: pointer !important;
+        transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.2s ease !important;
     }
-    div[data-testid="stChatInput"] button[data-testid="stChatInputMicButton"]:hover {
-        background: #e0f2fe !important;
-        background-color: #e0f2fe !important;
+    div[data-testid="stChatInput"] button[data-testid="stChatInputMicButton"]:hover,
+    div[data-testid="stChatInput"] [data-testid="stChatInputMicButton"]:hover,
+    div[data-testid="stChatInput"] button[aria-label*="record" i]:hover,
+    div[data-testid="stChatInput"] button[aria-label*="audio" i]:hover,
+    div[data-testid="stChatInput"] button[aria-label*="mic" i]:hover {
+        background: transparent !important;
+        background-color: transparent !important;
         color: #0369a1 !important;
-        border-color: #0284c7 !important;
-        transform: scale(1.08) !important;
+        border: none !important;
+        outline: none !important;
+        box-shadow: none !important;
+        transform: scale(1.15) !important;
+        opacity: 0.9 !important;
     }
     div[data-testid="stChatInput"] button[data-testid="stChatInputMicButton"]:active,
-    div[data-testid="stChatInput"] button[data-testid="stChatInputMicButton"]:focus {
-        background: #e0f2fe !important;
-        background-color: #e0f2fe !important;
+    div[data-testid="stChatInput"] button[data-testid="stChatInputMicButton"]:focus,
+    div[data-testid="stChatInput"] button[aria-label*="record" i]:active,
+    div[data-testid="stChatInput"] button[aria-label*="record" i]:focus {
+        background: transparent !important;
+        background-color: transparent !important;
+        border: none !important;
         outline: none !important;
+        box-shadow: none !important;
     }
 
-    /* Never show red icons or red backgrounds even in error, disabled, or recording state */
+    /* Crisp Executive Mic Icon / Symbol SVG - Strict Light Blue */
     div[data-testid="stChatInput"] button[data-testid="stChatInputMicButton"] svg,
+    div[data-testid="stChatInput"] button[data-testid="stChatInputMicButton"] path,
+    div[data-testid="stChatInput"] button[aria-label*="record" i] svg,
+    div[data-testid="stChatInput"] button[aria-label*="record" i] path,
     div[data-testid="stChatInput"] button[data-testid="stChatInputMicButton"] * {
+        width: 20px !important;
+        height: 20px !important;
         fill: #0284c7 !important;
         color: #0284c7 !important;
+        stroke: #0284c7 !important;
+        transition: fill 0.15s ease, color 0.15s ease !important;
+    }
+    div[data-testid="stChatInput"] button[data-testid="stChatInputMicButton"]:hover svg,
+    div[data-testid="stChatInput"] button[data-testid="stChatInputMicButton"]:hover path,
+    div[data-testid="stChatInput"] button[aria-label*="record" i]:hover svg,
+    div[data-testid="stChatInput"] button[aria-label*="record" i]:hover path {
+        fill: #0369a1 !important;
+        color: #0369a1 !important;
+        stroke: #0369a1 !important;
     }
 
     button[data-testid="stChatInputSubmitButton"] {
