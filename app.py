@@ -127,8 +127,8 @@ st.markdown("""
     div[data-testid="stMainBlockContainer"],
     .block-container:not([data-testid="stBottomBlockContainer"]) {
         padding-top: 2rem !important;
-        padding-bottom: 5rem !important;
-        max-width: 880px !important;
+        padding-bottom: 5.5rem !important;
+        max-width: 900px !important;
     }
 
     /* Fixed Bottom Chat Container - Clean Alignment that never overlaps with Sidebar */
@@ -137,9 +137,9 @@ st.markdown("""
         z-index: 80 !important;
     }
     div[data-testid="stBottomBlockContainer"] {
-        max-width: 880px !important;
+        max-width: 900px !important;
         padding-top: 0.5rem !important;
-        padding-bottom: 1.2rem !important;
+        padding-bottom: 1.4rem !important;
     }
 
     /* Executive Hero Greeting */
@@ -376,128 +376,137 @@ st.markdown("""
         box-shadow: 0 1px 4px rgba(2, 132, 199, 0.04) !important;
     }
 
-    /* Chat Input Bar - Polished Light Blue Ring with Mic on Left */
+    /* Chat / Search Input Bar - Bigger, Executive Clean Design */
     div[data-testid="stChatInput"] {
         position: relative !important;
-        border-radius: 28px !important;
+        border-radius: 32px !important;
         border: 1.5px solid #bae6fd !important;
         background: #ffffff !important;
-        box-shadow: 0 4px 18px rgba(2, 132, 199, 0.09) !important;
+        min-height: 58px !important;
+        box-shadow: 0 4px 20px rgba(2, 132, 199, 0.10) !important;
         transition: all 0.2s ease !important;
     }
     div[data-testid="stChatInput"]:focus-within {
         border-color: #0284c7 !important;
-        box-shadow: 0 4px 22px rgba(2, 132, 199, 0.22) !important;
+        box-shadow: 0 4px 24px rgba(2, 132, 199, 0.22) !important;
     }
     div[data-testid="stChatInput"] textarea {
-        padding-left: 48px !important;
+        min-height: 48px !important;
+        font-size: 1.05rem !important;
+        line-height: 1.5 !important;
+        padding-top: 14px !important;
+        padding-bottom: 14px !important;
+        padding-left: 54px !important;
+        padding-right: 54px !important;
         text-decoration: none !important;
         -webkit-text-decorations-in-effect: none !important;
         text-decoration-line: none !important;
         caret-color: #0284c7 !important;
+        color: #0f172a !important;
     }
-    div[data-testid="stChatInput"] button {
-        color: #0284c7 !important;
+    div[data-testid="stChatInput"] textarea::placeholder {
+        font-size: 1.02rem !important;
+        color: #94a3b8 !important;
     }
 
-    /* Completely Remove Any Red Background, Red Borders, or Error Box from Chat Input and Microphone */
+    /* Completely Remove Any Red Background, Red Borders, or Box Wrappers from Chat Input and Microphone */
     div[data-testid="stChatInput"] [data-testid="stTooltipErrorHoverTarget"],
     div[data-testid="stChatInput"] .stTooltipErrorHoverTarget,
     div[data-testid="stChatInput"] div:has(button[data-testid="stChatInputMicButton"]),
-    div[data-testid="stChatInput"] div:has([data-testid="stChatInputMicButton"]),
-    div[data-testid="stChatInput"] [class*="Tooltip"],
-    div[data-testid="stChatInput"] [class*="tooltip"],
-    div[data-testid="stChatInput"] [class*="HoverTarget"] {
+    div[data-testid="stChatInput"] div:has([data-testid="stChatInputMicButton"]) {
         background: transparent !important;
         background-color: transparent !important;
         border: none !important;
-        outline: none !important;
         box-shadow: none !important;
-        padding: 0 !important;
-        margin: 0 !important;
     }
 
-    /* Executive Microphone Symbol Inside Search/Chat Bar (Left Side) - Pure Icon, No Box */
-    div[data-testid="stChatInput"] button[data-testid="stChatInputMicButton"],
-    div[data-testid="stChatInput"] [data-testid="stChatInputMicButton"],
-    div[data-testid="stChatInput"] button[aria-label*="record" i],
-    div[data-testid="stChatInput"] button[aria-label*="audio" i],
-    div[data-testid="stChatInput"] button[aria-label*="mic" i] {
+    /* Clean Mic Symbol in Pure Black Color - No Box, Centered Vertically on Left */
+    div[data-testid="stChatInput"] button[data-testid="stChatInputMicButton"] {
         position: absolute !important;
-        left: 12px !important;
-        bottom: 8px !important;
+        left: 14px !important;
+        top: 50% !important;
+        transform: translateY(-50%) !important;
+        bottom: auto !important;
+        z-index: 20 !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        color: #000000 !important;
+        background: transparent !important;
+        background-color: transparent !important;
+        border: none !important;
+        box-shadow: none !important;
+        outline: none !important;
+        width: 36px !important;
+        height: 36px !important;
+        min-width: 36px !important;
+        min-height: 36px !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        cursor: pointer !important;
+        transition: transform 0.15s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.15s ease !important;
+    }
+    div[data-testid="stChatInput"] button[data-testid="stChatInputMicButton"]:hover {
+        background: transparent !important;
+        background-color: transparent !important;
+        border: none !important;
+        box-shadow: none !important;
+        outline: none !important;
+        transform: translateY(-50%) scale(1.18) !important;
+        opacity: 0.8 !important;
+    }
+    div[data-testid="stChatInput"] button[data-testid="stChatInputMicButton"]:active,
+    div[data-testid="stChatInput"] button[data-testid="stChatInputMicButton"]:focus {
+        background: transparent !important;
+        background-color: transparent !important;
+        border: none !important;
+        box-shadow: none !important;
+        outline: none !important;
+    }
+
+    /* Pure Black Mic Symbol Styling */
+    div[data-testid="stChatInput"] button[data-testid="stChatInputMicButton"] svg,
+    div[data-testid="stChatInput"] button[data-testid="stChatInputMicButton"] svg path,
+    div[data-testid="stChatInput"] button[data-testid="stChatInputMicButton"] svg circle,
+    div[data-testid="stChatInput"] button[data-testid="stChatInputMicButton"] svg rect,
+    div[data-testid="stChatInput"] button[data-testid="stChatInputMicButton"] * {
+        fill: #000000 !important;
+        stroke: #000000 !important;
+        color: #000000 !important;
+    }
+    div[data-testid="stChatInput"] button[data-testid="stChatInputMicButton"]:hover svg,
+    div[data-testid="stChatInput"] button[data-testid="stChatInputMicButton"]:hover * {
+        fill: #374151 !important;
+        stroke: #374151 !important;
+        color: #374151 !important;
+    }
+
+    /* Submit Button (Send Arrow) - Centered Vertically on Right */
+    div[data-testid="stChatInput"] button[data-testid="stChatInputSubmitButton"] {
+        position: absolute !important;
+        right: 14px !important;
+        top: 50% !important;
+        transform: translateY(-50%) !important;
+        bottom: auto !important;
         z-index: 20 !important;
         margin: 0 !important;
         padding: 0 !important;
         color: #0284c7 !important;
         background: transparent !important;
-        background-color: transparent !important;
         border: none !important;
-        outline: none !important;
         box-shadow: none !important;
-        border-radius: 0 !important;
-        width: 28px !important;
-        height: 28px !important;
-        min-width: 28px !important;
-        min-height: 28px !important;
-        display: inline-flex !important;
+        outline: none !important;
+        width: 36px !important;
+        height: 36px !important;
+        display: flex !important;
         align-items: center !important;
         justify-content: center !important;
-        cursor: pointer !important;
-        transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.2s ease !important;
+        transition: transform 0.15s ease, color 0.15s ease !important;
     }
-    div[data-testid="stChatInput"] button[data-testid="stChatInputMicButton"]:hover,
-    div[data-testid="stChatInput"] [data-testid="stChatInputMicButton"]:hover,
-    div[data-testid="stChatInput"] button[aria-label*="record" i]:hover,
-    div[data-testid="stChatInput"] button[aria-label*="audio" i]:hover,
-    div[data-testid="stChatInput"] button[aria-label*="mic" i]:hover {
+    div[data-testid="stChatInput"] button[data-testid="stChatInputSubmitButton"]:hover {
+        transform: translateY(-50%) scale(1.15) !important;
+        color: #0369a1 !important;
         background: transparent !important;
-        background-color: transparent !important;
-        color: #0369a1 !important;
-        border: none !important;
-        outline: none !important;
-        box-shadow: none !important;
-        transform: scale(1.15) !important;
-        opacity: 0.9 !important;
-    }
-    div[data-testid="stChatInput"] button[data-testid="stChatInputMicButton"]:active,
-    div[data-testid="stChatInput"] button[data-testid="stChatInputMicButton"]:focus,
-    div[data-testid="stChatInput"] button[aria-label*="record" i]:active,
-    div[data-testid="stChatInput"] button[aria-label*="record" i]:focus {
-        background: transparent !important;
-        background-color: transparent !important;
-        border: none !important;
-        outline: none !important;
-        box-shadow: none !important;
-    }
-
-    /* Crisp Executive Mic Icon / Symbol SVG - Strict Light Blue */
-    div[data-testid="stChatInput"] button[data-testid="stChatInputMicButton"] svg,
-    div[data-testid="stChatInput"] button[data-testid="stChatInputMicButton"] path,
-    div[data-testid="stChatInput"] button[aria-label*="record" i] svg,
-    div[data-testid="stChatInput"] button[aria-label*="record" i] path,
-    div[data-testid="stChatInput"] button[data-testid="stChatInputMicButton"] * {
-        width: 20px !important;
-        height: 20px !important;
-        fill: #0284c7 !important;
-        color: #0284c7 !important;
-        stroke: #0284c7 !important;
-        transition: fill 0.15s ease, color 0.15s ease !important;
-    }
-    div[data-testid="stChatInput"] button[data-testid="stChatInputMicButton"]:hover svg,
-    div[data-testid="stChatInput"] button[data-testid="stChatInputMicButton"]:hover path,
-    div[data-testid="stChatInput"] button[aria-label*="record" i]:hover svg,
-    div[data-testid="stChatInput"] button[aria-label*="record" i]:hover path {
-        fill: #0369a1 !important;
-        color: #0369a1 !important;
-        stroke: #0369a1 !important;
-    }
-
-    button[data-testid="stChatInputSubmitButton"] {
-        color: #0284c7 !important;
-    }
-    button[data-testid="stChatInputSubmitButton"]:hover {
-        color: #0369a1 !important;
     }
 
     /* Inline Code & Badges */
@@ -566,7 +575,8 @@ st.markdown("""
             padding-bottom: 0.8rem !important;
         }
         div[data-testid="stChatInput"] {
-            border-radius: 22px !important;
+            border-radius: 28px !important;
+            min-height: 54px !important;
         }
         button[data-testid="stExpandSidebarButton"] {
             top: 8px !important;
