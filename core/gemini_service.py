@@ -15,6 +15,8 @@ DUMMY_KEYS = [
     "aizasyyouractualkeyhere",
     "your_key",
     "your_api_key",
+    "your_actual",
+    "actual_api_key",
     "placeholder",
     "youractualkeyhere",
     "enter_your_api_key"

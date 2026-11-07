@@ -621,6 +621,9 @@ st.session_state.assistant = AgenticAssistant(api_key=st.session_state.api_key)
 if "active_file" not in st.session_state:
     st.session_state.active_file = None
 
+if "active_link" not in st.session_state:
+    st.session_state.active_link = None
+
 if "active_df" not in st.session_state:
     st.session_state.active_df = None
 
@@ -653,48 +656,71 @@ with st.sidebar:
 
         st.write("")
 
-        # Clean Document Uploader
-        st.markdown("###### Attach Document")
-        uploaded_file = st.file_uploader(
-            "PDF, CSV, Excel, Images",
-            type=["pdf", "xlsx", "csv", "png", "jpg", "jpeg", "mp3", "wav", "mp4"],
-            key=f"uploader_{st.session_state.file_uploader_key}",
-            label_visibility="collapsed"
-        )
+        # Clean Document & Link Ingestion
+        st.markdown("###### Attach File or Link")
+        tab_upload, tab_link = st.tabs(["📁 File", "🔗 Link"])
+        
+        with tab_upload:
+            uploaded_file = st.file_uploader(
+                "PDF, CSV, Excel, Images",
+                type=["pdf", "xlsx", "csv", "png", "jpg", "jpeg", "mp3", "wav", "mp4"],
+                key=f"uploader_{st.session_state.file_uploader_key}",
+                label_visibility="collapsed"
+            )
 
-        if uploaded_file is not None:
-            file_ext = uploaded_file.name.split(".")[-1].lower()
-            cat = "image" if file_ext in ["png", "jpg", "jpeg"] else \
-                  "audio" if file_ext in ["mp3", "wav"] else \
-                  "video" if file_ext in ["mp4", "mov"] else \
-                  "excel" if file_ext in ["xlsx", "csv"] else \
-                  "pdf" if file_ext == "pdf" else "text"
+            if uploaded_file is not None:
+                file_ext = uploaded_file.name.split(".")[-1].lower()
+                cat = "image" if file_ext in ["png", "jpg", "jpeg"] else \
+                      "audio" if file_ext in ["mp3", "wav"] else \
+                      "video" if file_ext in ["mp4", "mov"] else \
+                      "excel" if file_ext in ["xlsx", "csv"] else \
+                      "pdf" if file_ext == "pdf" else "text"
 
-            temp_dir = tempfile.gettempdir()
-            temp_path = os.path.join(temp_dir, uploaded_file.name)
-            with open(temp_path, "wb") as f:
-                f.write(uploaded_file.getbuffer())
+                temp_dir = tempfile.gettempdir()
+                temp_path = os.path.join(temp_dir, uploaded_file.name)
+                with open(temp_path, "wb") as f:
+                    f.write(uploaded_file.getbuffer())
 
-            st.session_state.active_file = {
-                "path": temp_path,
-                "type": cat,
-                "name": uploaded_file.name,
-                "size_mb": round(uploaded_file.size / (1024 * 1024), 2)
-            }
+                st.session_state.active_file = {
+                    "path": temp_path,
+                    "type": cat,
+                    "name": uploaded_file.name,
+                    "size_mb": round(uploaded_file.size / (1024 * 1024), 2)
+                }
+                st.session_state.active_link = None
 
-            if cat == "excel":
-                try:
-                    st.session_state.active_df = pd.read_csv(temp_path) if file_ext == "csv" else pd.read_excel(temp_path)
-                except Exception:
-                    pass
+                if cat == "excel":
+                    try:
+                        st.session_state.active_df = pd.read_csv(temp_path) if file_ext == "csv" else pd.read_excel(temp_path)
+                    except Exception:
+                        pass
+
+        with tab_link:
+            link_input = st.text_input("Paste YouTube, Image, or Article Link", placeholder="https://...", key="sidebar_url_input", label_visibility="collapsed")
+            if st.button("Attach Link", key="sidebar_attach_url_btn", use_container_width=True):
+                if link_input.strip():
+                    with st.spinner("Inspecting link..."):
+                        info = st.session_state.assistant.link_service.fetch_link_info(link_input.strip())
+                        st.session_state.active_link = info
+                        st.session_state.active_file = None
+                        st.session_state.active_df = None
+                        st.rerun()
 
         if st.session_state.active_file:
             f_info = st.session_state.active_file
-            st.caption(f"Active: **{f_info['name']}** ({f_info['size_mb']} MB)")
+            st.caption(f"Active File: **{f_info['name']}** ({f_info['size_mb']} MB)")
             if st.button("Detach Document", use_container_width=True):
                 st.session_state.active_file = None
                 st.session_state.active_df = None
                 st.session_state.file_uploader_key += 1
+                st.rerun()
+
+        if st.session_state.get("active_link"):
+            l_info = st.session_state.active_link
+            icon = "🎥" if l_info.get("category") == "youtube" else "🖼️" if l_info.get("category") == "image" else "🌐"
+            st.caption(f"Active Link: {icon} **{l_info.get('title', 'Web Link')[:26]}**")
+            if st.button("Detach Link", use_container_width=True, key="detach_link_btn"):
+                st.session_state.active_link = None
                 st.rerun()
 
     # Bottom Section: Firmly Pinned to the End Line of the Sidebar
@@ -845,6 +871,27 @@ if st.session_state.active_file:
     if doc_c4.button("Revision Notes", use_container_width=True):
         preset_action = f"Create concise study and revision notes based on '{f_info['name']}'."
 
+elif st.session_state.get("active_link"):
+    l_info = st.session_state.active_link
+    l_cat = l_info.get("category", "link")
+    icon = "🎥" if l_cat == "youtube" else "🖼️" if l_cat == "image" else "🌐"
+    st.markdown(f"""
+    <div class="document-chip">
+        <span>{icon}</span>
+        <span><b>{l_info.get('title', 'Web Link')}</b> ({l_cat.upper()})</span>
+    </div>
+    """, unsafe_allow_html=True)
+
+    link_c1, link_c2, link_c3, link_c4 = st.columns(4)
+    if link_c1.button("Summarize", key="act_link_sum", use_container_width=True):
+        preset_action = f"Provide a comprehensive summary and key takeaways of '{l_info.get('title')}'."
+    if link_c2.button("Exam Questions & Answers", key="act_link_qa", use_container_width=True):
+        preset_action = f"Generate 5 important questions and detailed answers based on the contents of '{l_info.get('title')}'."
+    if link_c3.button("Key Concepts", key="act_link_concepts", use_container_width=True):
+        preset_action = f"Extract the core topics, definitions, and concepts from '{l_info.get('title')}'."
+    if link_c4.button("Revision Notes", key="act_link_notes", use_container_width=True):
+        preset_action = f"Create concise study and revision notes based on '{l_info.get('title')}'."
+
 # ---------------------------------------------------------------------------
 # Chat Feed
 # ---------------------------------------------------------------------------
@@ -864,6 +911,12 @@ for msg in st.session_state.messages:
                 <span>📄</span> Referenced from active document
             </div>
             """, unsafe_allow_html=True)
+        elif not is_user and msg.get("route") == "LINK_ANALYSIS":
+            st.markdown("""
+            <div class="source-footnote">
+                <span>🔗</span> Referenced from online link
+            </div>
+            """, unsafe_allow_html=True)
 
 # ---------------------------------------------------------------------------
 # Integrated Bottom Chat Input (With Built-in Mic on Left Side)
@@ -872,8 +925,12 @@ if st.session_state.active_file:
     f_name = st.session_state.active_file['name']
     short_name = f_name if len(f_name) <= 26 else f_name[:24] + "..."
     chat_placeholder = f"Ask about '{short_name}' or speak with mic..."
+elif st.session_state.get("active_link"):
+    l_title = st.session_state.active_link.get('title', 'Web Link')
+    short_title = l_title if len(l_title) <= 26 else l_title[:24] + "..."
+    chat_placeholder = f"Ask about '{short_title}' or speak with mic..."
 else:
-    chat_placeholder = "Message Agent Rag or speak using the mic..."
+    chat_placeholder = "Message Agent Rag, paste a link (YouTube/Web), or speak with mic..."
 
 chat_val = st.chat_input(chat_placeholder, accept_audio=True)
 
@@ -918,6 +975,7 @@ if user_query:
         "query": user_query,
         "attached_file_path": f_info.get("path"),
         "attached_file_type": f_info.get("type"),
+        "attached_link": st.session_state.get("active_link"),
         "active_dataframe": st.session_state.active_df,
         "route": None,
         "response": None,

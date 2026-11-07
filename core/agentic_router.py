@@ -5,6 +5,7 @@ Handles priority correctly so personal/festive questions are not hijacked by att
 """
 
 import os
+import re
 from typing import Dict, Any, List, Literal, Optional
 from pydantic import BaseModel, Field
 from typing_extensions import TypedDict
@@ -12,6 +13,7 @@ from typing_extensions import TypedDict
 from core.gemini_service import GeminiService
 from core.excel_analyzer import ExcelAnalyzer
 from core.rag_engine import MultimodalRAGEngine
+from core.link_service import LinkService
 from database.models import (
     get_contact_events,
     get_festivals,
@@ -27,32 +29,41 @@ class AgentState(TypedDict):
     query: str
     attached_file_path: Optional[str]
     attached_file_type: Optional[str] # 'pdf', 'excel', 'image', 'audio', 'video', None
+    attached_link: Optional[Dict[str, Any]]
     active_dataframe: Optional[Any]
     route: Optional[str]
     response: Optional[str]
-    mode: Optional[str] # 'auto', 'doc_qa', 'personal', 'general'
+    mode: Optional[str] # 'auto', 'doc_qa', 'personal', 'general', 'link'
 
 class AgenticAssistant:
     def __init__(self, api_key: Optional[str] = None):
         self.gemini = GeminiService(api_key=api_key)
         self.rag_engine = MultimodalRAGEngine()
         self.excel_analyzer = ExcelAnalyzer()
+        self.link_service = LinkService()
 
     def update_api_key(self, api_key: str):
         """Allows hot-swapping API key from UI."""
         self.gemini = GeminiService(api_key=api_key)
 
-    def classify_intent(self, query: str, file_type: Optional[str], mode: str = "auto") -> str:
+    def classify_intent(self, query: str, file_type: Optional[str], mode: str = "auto", attached_link: Optional[Dict[str, Any]] = None) -> str:
         """
         Determines which engine should handle the query.
         When a document, video, or data file is attached, the searching bar is FIRMLY ATTACHED to the document!
+        When a link (YouTube, webpage, image, movie) is attached or present, routes to LINK_ANALYSIS!
         """
         if mode == "doc_qa" and file_type:
             return "STRUCTURED_DATA" if file_type in ["excel", "csv"] else "MULTIMODAL_RAG"
+        elif mode == "link" or attached_link:
+            return "LINK_ANALYSIS"
         elif mode == "personal":
             return "PERSONAL_MEMORY"
         elif mode == "general":
             return "GENERAL_CHAT"
+
+        # Check for web / video / photo links inside the query
+        if re.search(r'https?://[^\s<>"]+', query):
+            return "LINK_ANALYSIS"
 
         q_lower = query.lower().strip()
 
@@ -162,11 +173,26 @@ class AgenticAssistant:
         mode = state.get("mode", "auto")
 
         # 1. Routing Decision
-        route = self.classify_intent(query, file_type, mode)
+        attached_link = state.get("attached_link")
+        route = self.classify_intent(query, file_type, mode, attached_link=attached_link)
         state["route"] = route
 
         # 2. Dispatch
-        if route == "STRUCTURED_DATA":
+        if route == "LINK_ANALYSIS":
+            link_info = attached_link
+            url = None
+            if not link_info:
+                url = self.link_service.extract_url(query)
+                if url:
+                    link_info = self.link_service.fetch_link_info(url)
+
+            if link_info:
+                clean_q = self.link_service.clean_query_around_url(query, url) if url else query
+                output = self.link_service.analyze_link(link_info, clean_q, self.gemini)
+            else:
+                output = "⚠️ Could not resolve a valid web link. Please provide a complete URL starting with `http://` or `https://`."
+
+        elif route == "STRUCTURED_DATA":
             if df is not None:
                 output = self.excel_analyzer.answer_query(df, query, self.gemini)
             elif file_path:
