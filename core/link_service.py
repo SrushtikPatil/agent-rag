@@ -11,7 +11,9 @@ import os
 import re
 import tempfile
 import hashlib
+import base64
 import requests
+import filetype
 from typing import Optional, Dict, Any
 from html.parser import HTMLParser
 
@@ -50,10 +52,10 @@ class SimpleHTMLTextExtractor(HTMLParser):
 class LinkService:
     @staticmethod
     def extract_url(text: str) -> Optional[str]:
-        """Finds the first http or https URL in a string."""
+        """Finds the first http, https, or base64 data URL in a string."""
         if not text:
             return None
-        match = re.search(r'https?://[^\s<>"]+', text)
+        match = re.search(r'(https?://[^\s<>"]+|data:image/[a-zA-Z0-9.+_-]+;base64,[a-zA-Z0-9+/=]+)', text)
         return match.group(0) if match else None
 
     @staticmethod
@@ -64,7 +66,32 @@ class LinkService:
         return cleaned.strip() or "Provide a comprehensive overview and analysis"
 
     def fetch_link_info(self, url: str) -> Dict[str, Any]:
-        """Inspects and downloads or extracts data from the URL."""
+        """Inspects and downloads or extracts data from the URL or base64 string."""
+        # 0. Base64 Data URL (e.g. pasted directly or from clipboard)
+        if url.startswith("data:image/"):
+            try:
+                header, b64_str = url.split(";base64,", 1)
+                img_bytes = base64.b64decode(b64_str)
+                ext = "png"
+                if "jpeg" in header or "jpg" in header:
+                    ext = "jpg"
+                elif "webp" in header:
+                    ext = "webp"
+                elif "gif" in header:
+                    ext = "gif"
+                url_hash = hashlib.md5(img_bytes[:32]).hexdigest()[:8]
+                temp_file = os.path.join(tempfile.gettempdir(), f"pasted_img_{url_hash}.{ext}")
+                with open(temp_file, "wb") as f:
+                    f.write(img_bytes)
+                return {
+                    "category": "image",
+                    "title": f"Pasted_Image_{url_hash}.{ext}",
+                    "path": temp_file,
+                    "url": url[:60] + "..."
+                }
+            except Exception:
+                pass
+
         # 1. YouTube Detection
         yt_match = re.search(r'(?:youtube\.com\/(?:watch\?v=|shorts\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})', url)
         if yt_match:
@@ -93,32 +120,51 @@ class LinkService:
                 "video_id": vid_id
             }
 
-        # 2. Direct Image URL Detection
-        img_extensions = ('.png', '.jpg', '.jpeg', '.webp', '.gif', '.bmp')
+        # 2. Universal Image URL Detection (direct extension, Google Images, Unsplash, Imgur, Cloudinary, etc.)
+        img_extensions = ('.png', '.jpg', '.jpeg', '.webp', '.gif', '.bmp', '.svg', '.jfif', '.tiff')
         clean_path = url.split('?')[0].lower()
         is_direct_img = any(clean_path.endswith(ext) for ext in img_extensions)
+        looks_like_img = is_direct_img or any(k in url.lower() for k in ["/image", "/images", "/img", "photo", "avatar", "icon", "format=jpg", "format=png", "format=webp"])
 
         try:
-            head = requests.head(url, headers=HEADERS, allow_redirects=True, timeout=5)
-            c_type = head.headers.get("Content-Type", "").lower()
-            if is_direct_img or "image/" in c_type:
-                # Download image to local temp
-                resp = requests.get(url, headers=HEADERS, stream=True, timeout=10)
-                if resp.status_code == 200:
-                    ext = clean_path.split('.')[-1] if '.' in clean_path else "jpg"
-                    if len(ext) > 4:
+            resp = requests.get(url, headers=HEADERS, stream=True, timeout=10)
+            if resp.status_code == 200:
+                c_type = resp.headers.get("Content-Type", "").lower()
+                initial_chunk = resp.raw.read(1024)
+                is_img_bytes = False
+                guessed_ext = "jpg"
+                if initial_chunk:
+                    try:
+                        is_img_bytes = filetype.is_image(initial_chunk)
+                        if is_img_bytes:
+                            g = filetype.guess(initial_chunk)
+                            if g:
+                                guessed_ext = g.extension
+                    except Exception:
+                        pass
+
+                if is_direct_img or "image/" in c_type or is_img_bytes or looks_like_img:
+                    ext = guessed_ext or (clean_path.split('.')[-1] if '.' in clean_path else "jpg")
+                    if len(ext) > 4 or not ext.isalnum():
                         ext = "jpg"
                     url_hash = hashlib.md5(url.encode()).hexdigest()[:8]
                     temp_file = os.path.join(tempfile.gettempdir(), f"link_img_{url_hash}.{ext}")
                     with open(temp_file, "wb") as f:
+                        if initial_chunk:
+                            f.write(initial_chunk)
                         for chunk in resp.iter_content(chunk_size=8192):
                             f.write(chunk)
-                    return {
-                        "category": "image",
-                        "title": os.path.basename(clean_path) or "Web Image",
-                        "path": temp_file,
-                        "url": url
-                    }
+                    
+                    if os.path.exists(temp_file) and os.path.getsize(temp_file) > 100:
+                        fname = os.path.basename(clean_path)
+                        if not fname or len(fname) < 3 or fname.endswith(ext):
+                            fname = f"Web_Image_{url_hash}.{ext}"
+                        return {
+                            "category": "image",
+                            "title": fname,
+                            "path": temp_file,
+                            "url": url
+                        }
         except Exception:
             pass
 

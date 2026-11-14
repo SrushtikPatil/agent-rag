@@ -61,8 +61,8 @@ class AgenticAssistant:
         elif mode == "general":
             return "GENERAL_CHAT"
 
-        # Check for web / video / photo links inside the query
-        if re.search(r'https?://[^\s<>"]+', query):
+        # Check for web / video / photo links or pasted data URLs inside the query
+        if re.search(r'(https?://[^\s<>"]+|data:image/[a-zA-Z0-9.+_-]+;base64,[a-zA-Z0-9+/=]+)', query):
             return "LINK_ANALYSIS"
 
         q_lower = query.lower().strip()

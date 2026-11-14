@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Agent Rag Image Paste Component</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
+    body {
+      background: transparent;
+      padding: 4px;
+      overflow: hidden;
+    }
+    .paste-zone {
+      width: 100%;
+      min-height: 105px;
+      border: 2px dashed #38bdf8;
+      background: #f0f9ff;
+      border-radius: 12px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      cursor: pointer;
+      outline: none;
+      padding: 12px 10px;
+      transition: all 0.2s ease;
+      user-select: none;
+    }
+    .paste-zone:hover, .paste-zone:focus {
+      background: #e0f2fe;
+      border-color: #0284c7;
+      box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.15);
+    }
+    .paste-zone.dragover {
+      background: #bae6fd;
+      border-color: #0284c7;
+      transform: scale(1.01);
+    }
+    .paste-icon {
+      width: 28px;
+      height: 28px;
+      margin-bottom: 6px;
+      color: #0284c7;
+    }
+    .paste-title {
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: #0369a1;
+      margin-bottom: 2px;
+    }
+    .paste-subtitle {
+      font-size: 0.72rem;
+      color: #64748b;
+    }
+    .kbd-badge {
+      display: inline-block;
+      background: #ffffff;
+      border: 1px solid #cbd5e1;
+      border-radius: 4px;
+      padding: 1px 5px;
+      font-size: 0.70rem;
+      font-weight: 600;
+      color: #334155;
+      box-shadow: 0 1px 1px rgba(0,0,0,0.06);
+    }
+    .status-msg {
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: #0284c7;
+      margin-top: 4px;
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="paste-zone" id="pasteZone" tabindex="0" title="Click here and press Ctrl+V to paste your image">
+    <svg class="paste-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+      <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+      <circle cx="15.5" cy="14.5" r="1.5"></circle>
+      <path d="m21 19-3.5-3.5L13 20"></path>
+    </svg>
+    <div class="paste-title" id="pasteTitle">Paste Image Here</div>
+    <div class="paste-subtitle" id="pasteSubtitle">Click & press <span class="kbd-badge">Ctrl + V</span> or drag image file</div>
+    <div class="status-msg" id="statusMsg">Processing image...</div>
+  </div>
+
+  <script>
+    function sendMessageToStreamlit(type, data) {
+      window.parent.postMessage(Object.assign({
+        isStreamlitMessage: true,
+        type: type
+      }, data), "*");
+    }
+
+    function notifyHeight() {
+      sendMessageToStreamlit("streamlit:setFrameHeight", {
+        height: document.body.scrollHeight + 8
+      });
+    }
+
+    function notifyValue(value) {
+      sendMessageToStreamlit("streamlit:setComponentValue", {
+        value: value
+      });
+    }
+
+    const pasteZone = document.getElementById("pasteZone");
+    const pasteTitle = document.getElementById("pasteTitle");
+    const pasteSubtitle = document.getElementById("pasteSubtitle");
+    const statusMsg = document.getElementById("statusMsg");
+
+    function processImageFile(file) {
+      if (!file || !file.type.startsWith("image/")) {
+        return;
+      }
+      pasteTitle.innerText = "Attaching Image...";
+      pasteSubtitle.style.display = "none";
+      statusMsg.style.display = "block";
+      statusMsg.innerText = "Reading clipboard (" + Math.round(file.size / 1024) + " KB)...";
+
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        statusMsg.innerText = "Image captured!";
+        notifyValue({
+          data_url: e.target.result,
+          name: file.name || ("pasted_image_" + Date.now() + ".png"),
+          size: file.size,
+          type: file.type
+        });
+      };
+      reader.readAsDataURL(file);
+    }
+
+    // Paste handler
+    function handlePaste(e) {
+      const clipboardData = e.clipboardData || window.clipboardData;
+      if (!clipboardData) return;
+
+      const items = clipboardData.items;
+      if (items) {
+        for (let i = 0; i < items.length; i++) {
+          if (items[i].type.indexOf("image") !== -1) {
+            const blob = items[i].getAsFile();
+            processImageFile(blob);
+            e.preventDefault();
+            return;
+          }
+        }
+      }
+
+      // If plain text URL was pasted (e.g. image link)
+      const text = clipboardData.getData("text");
+      if (text && (text.startsWith("http://") || text.startsWith("https://") || text.startsWith("data:image/"))) {
+        pasteTitle.innerText = "Attaching Link...";
+        notifyValue({
+          image_url: text.trim(),
+          name: "web_image_" + Date.now() + ".jpg"
+        });
+        e.preventDefault();
+      }
+    }
+
+    pasteZone.addEventListener("paste", handlePaste);
+    window.addEventListener("paste", handlePaste);
+
+    // Drag and Drop handlers
+    pasteZone.addEventListener("dragover", function(e) {
+      e.preventDefault();
+      pasteZone.classList.add("dragover");
+    });
+    pasteZone.addEventListener("dragleave", function(e) {
+      e.preventDefault();
+      pasteZone.classList.remove("dragover");
+    });
+    pasteZone.addEventListener("drop", function(e) {
+      e.preventDefault();
+      pasteZone.classList.remove("dragover");
+      if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+        const file = e.dataTransfer.files[0];
+        if (file.type.startsWith("image/")) {
+          processImageFile(file);
+        }
+      }
+    });
+
+    // Streamlit Component Ready handshake
+    window.addEventListener("message", function(event) {
+      if (event.data && event.data.type === "streamlit:render") {
+        notifyHeight();
+      }
+    });
+
+    sendMessageToStreamlit("streamlit:componentReady", { apiVersion: 1 });
+    window.addEventListener("load", notifyHeight);
+    setTimeout(notifyHeight, 150);
+  </script>
+</body>
+</html>

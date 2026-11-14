@@ -652,21 +652,22 @@ with st.sidebar:
 
         st.write("")
 
-        # Clean Document & Link Ingestion
-        st.markdown("###### Attach File or Link")
-        tab_upload, tab_link = st.tabs(["📁 File", "🔗 Link"])
+        # Clean Document, Paste Image & Link Ingestion
+        st.markdown("###### Attach File, Paste Image, or Link")
+        tab_upload, tab_paste, tab_link = st.tabs(["📁 Upload", "📋 Paste Image", "🔗 Link"])
         
         with tab_upload:
             uploaded_file = st.file_uploader(
-                "PDF, CSV, Excel, Images",
-                type=["pdf", "xlsx", "csv", "png", "jpg", "jpeg", "mp3", "wav", "mp4"],
+                "PDF, CSV, Excel, Images, Media",
+                type=["pdf", "xlsx", "csv", "png", "jpg", "jpeg", "webp", "bmp", "gif", "svg", "jfif", "tiff", "ico", "mp3", "wav", "mp4"],
                 key=f"uploader_{st.session_state.file_uploader_key}",
                 label_visibility="collapsed"
             )
 
             if uploaded_file is not None:
                 file_ext = uploaded_file.name.split(".")[-1].lower()
-                cat = "image" if file_ext in ["png", "jpg", "jpeg"] else \
+                image_exts = ["png", "jpg", "jpeg", "webp", "bmp", "gif", "svg", "jfif", "tiff", "ico"]
+                cat = "image" if file_ext in image_exts else \
                       "audio" if file_ext in ["mp3", "wav"] else \
                       "video" if file_ext in ["mp4", "mov"] else \
                       "excel" if file_ext in ["xlsx", "csv"] else \
@@ -691,20 +692,80 @@ with st.sidebar:
                     except Exception:
                         pass
 
+        with tab_paste:
+            from core.components.paste_image import render_paste_image_zone
+            # Interactive Clipboard Paste Zone (Captures Ctrl+V and drag-and-drop)
+            pasted_result = render_paste_image_zone(key="clipboard_paste_widget")
+            if pasted_result:
+                if "path" in pasted_result:
+                    st.session_state.active_file = pasted_result
+                    st.session_state.active_link = None
+                    st.session_state.active_df = None
+                    st.rerun()
+                elif "image_url" in pasted_result:
+                    with st.spinner("Fetching image..."):
+                        info = st.session_state.assistant.link_service.fetch_link_info(pasted_result["image_url"])
+                        if info.get("category") == "image" and info.get("path"):
+                            st.session_state.active_file = {
+                                "path": info["path"],
+                                "type": "image",
+                                "name": info.get("title", "Pasted Image"),
+                                "size_mb": round(os.path.getsize(info["path"]) / (1024 * 1024), 2)
+                            }
+                            st.session_state.active_link = None
+                            st.session_state.active_df = None
+                        else:
+                            st.session_state.active_link = info
+                            st.session_state.active_file = None
+                            st.session_state.active_df = None
+                        st.rerun()
+
+            st.caption("Or paste direct image URL or Base64:")
+            direct_paste_val = st.text_input("Paste image URL or data:image/...", placeholder="https://... or data:image/...", key="sidebar_paste_txt_input", label_visibility="collapsed")
+            if st.button("Attach Pasted Image", key="sidebar_attach_pasted_btn", use_container_width=True):
+                if direct_paste_val.strip():
+                    with st.spinner("Inspecting pasted image..."):
+                        info = st.session_state.assistant.link_service.fetch_link_info(direct_paste_val.strip())
+                        if info.get("category") == "image" and info.get("path"):
+                            st.session_state.active_file = {
+                                "path": info["path"],
+                                "type": "image",
+                                "name": info.get("title", "Pasted Image"),
+                                "size_mb": round(os.path.getsize(info["path"]) / (1024 * 1024), 2)
+                            }
+                            st.session_state.active_link = None
+                            st.session_state.active_df = None
+                        else:
+                            st.session_state.active_link = info
+                            st.session_state.active_file = None
+                            st.session_state.active_df = None
+                        st.rerun()
+
         with tab_link:
-            link_input = st.text_input("Paste YouTube, Image, or Article Link", placeholder="https://...", key="sidebar_url_input", label_visibility="collapsed")
+            link_input = st.text_input("Paste YouTube, Article, or Web Link", placeholder="https://...", key="sidebar_url_input", label_visibility="collapsed")
             if st.button("Attach Link", key="sidebar_attach_url_btn", use_container_width=True):
                 if link_input.strip():
                     with st.spinner("Inspecting link..."):
                         info = st.session_state.assistant.link_service.fetch_link_info(link_input.strip())
-                        st.session_state.active_link = info
-                        st.session_state.active_file = None
-                        st.session_state.active_df = None
+                        if info.get("category") == "image" and info.get("path"):
+                            st.session_state.active_file = {
+                                "path": info["path"],
+                                "type": "image",
+                                "name": info.get("title", "Web Image"),
+                                "size_mb": round(os.path.getsize(info["path"]) / (1024 * 1024), 2)
+                            }
+                            st.session_state.active_link = None
+                            st.session_state.active_df = None
+                        else:
+                            st.session_state.active_link = info
+                            st.session_state.active_file = None
+                            st.session_state.active_df = None
                         st.rerun()
 
         if st.session_state.active_file:
             f_info = st.session_state.active_file
-            st.caption(f"Active File: **{f_info['name']}** ({f_info['size_mb']} MB)")
+            icon = "🖼️" if f_info.get("type") == "image" else "🎥" if f_info.get("type") == "video" else "📄"
+            st.caption(f"Active File: {icon} **{f_info['name']}** ({f_info['size_mb']} MB)")
             if st.button("Detach Document", use_container_width=True):
                 st.session_state.active_file = None
                 st.session_state.active_df = None
