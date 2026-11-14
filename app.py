@@ -420,7 +420,7 @@ st.markdown("""
         box-shadow: none !important;
     }
 
-    /* Clean Mic Symbol in Pure Black Color - No Box, Centered Vertically on Left */
+    /* Executive Real Microphone Symbol in Classic Blue Color - Centered Vertically on Left */
     div[data-testid="stChatInput"] button[data-testid="stChatInputMicButton"] {
         position: absolute !important;
         left: 14px !important;
@@ -430,9 +430,12 @@ st.markdown("""
         z-index: 20 !important;
         margin: 0 !important;
         padding: 0 !important;
-        color: #000000 !important;
         background: transparent !important;
         background-color: transparent !important;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' width='22' height='22'%3E%3Cpath d='M12 2a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z' fill='%230284c7' stroke='%230284c7' stroke-width='1.2'/%3E%3Cpath d='M19 10v1a7 7 0 0 1-14 0v-1' fill='none' stroke='%230284c7' stroke-width='2' stroke-linecap='round'/%3E%3Cline x1='12' y1='18' x2='12' y2='22' stroke='%230284c7' stroke-width='2' stroke-linecap='round'/%3E%3Cline x1='8' y1='22' x2='16' y2='22' stroke='%230284c7' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E") !important;
+        background-repeat: no-repeat !important;
+        background-position: center !important;
+        background-size: 22px 22px !important;
         border: none !important;
         box-shadow: none !important;
         outline: none !important;
@@ -444,41 +447,34 @@ st.markdown("""
         align-items: center !important;
         justify-content: center !important;
         cursor: pointer !important;
-        transition: transform 0.15s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.15s ease !important;
+        transition: transform 0.15s cubic-bezier(0.4, 0, 0.2, 1), background-image 0.15s ease !important;
     }
     div[data-testid="stChatInput"] button[data-testid="stChatInputMicButton"]:hover {
-        background: transparent !important;
         background-color: transparent !important;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' width='22' height='22'%3E%3Cpath d='M12 2a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z' fill='%230369a1' stroke='%230369a1' stroke-width='1.2'/%3E%3Cpath d='M19 10v1a7 7 0 0 1-14 0v-1' fill='none' stroke='%230369a1' stroke-width='2' stroke-linecap='round'/%3E%3Cline x1='12' y1='18' x2='12' y2='22' stroke='%230369a1' stroke-width='2' stroke-linecap='round'/%3E%3Cline x1='8' y1='22' x2='16' y2='22' stroke='%230369a1' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E") !important;
         border: none !important;
         box-shadow: none !important;
         outline: none !important;
-        transform: translateY(-50%) scale(1.18) !important;
-        opacity: 0.8 !important;
+        transform: translateY(-50%) scale(1.15) !important;
     }
     div[data-testid="stChatInput"] button[data-testid="stChatInputMicButton"]:active,
     div[data-testid="stChatInput"] button[data-testid="stChatInputMicButton"]:focus {
-        background: transparent !important;
         background-color: transparent !important;
         border: none !important;
         box-shadow: none !important;
         outline: none !important;
     }
 
-    /* Pure Black Mic Symbol Styling */
-    div[data-testid="stChatInput"] button[data-testid="stChatInputMicButton"] svg,
-    div[data-testid="stChatInput"] button[data-testid="stChatInputMicButton"] svg path,
-    div[data-testid="stChatInput"] button[data-testid="stChatInputMicButton"] svg circle,
-    div[data-testid="stChatInput"] button[data-testid="stChatInputMicButton"] svg rect,
-    div[data-testid="stChatInput"] button[data-testid="stChatInputMicButton"] * {
-        fill: #000000 !important;
-        stroke: #000000 !important;
-        color: #000000 !important;
+    /* Completely hide any internal children/rect elements to prevent black square artifact */
+    div[data-testid="stChatInput"] button[data-testid="stChatInputMicButton"] > * {
+        display: none !important;
+        visibility: hidden !important;
+        opacity: 0 !important;
+        pointer-events: none !important;
     }
-    div[data-testid="stChatInput"] button[data-testid="stChatInputMicButton"]:hover svg,
-    div[data-testid="stChatInput"] button[data-testid="stChatInputMicButton"]:hover * {
-        fill: #374151 !important;
-        stroke: #374151 !important;
-        color: #374151 !important;
+    div[data-testid="stChatInput"] button[data-testid="stChatInputMicButton"] svg rect {
+        display: none !important;
+        fill: none !important;
     }
 
     /* Submit Button (Send Arrow) - Centered Vertically on Right */
