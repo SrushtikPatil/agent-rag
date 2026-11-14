@@ -661,53 +661,77 @@ with st.sidebar:
         st.write("")
 
         # -------------------------------------------------------------
-        # All-In-One Unified Attachment Bar (Files, Images, Ctrl+V, Links)
+        # All-In-One Unified Attachment Bar (Link / Image URL + File Uploader)
         # -------------------------------------------------------------
-        st.markdown("###### Attach Document, Image, or Link")
-        from core.components.unified_attach_bar import render_unified_attach_bar
+        st.markdown("###### Attach File, Image, or Link")
 
-        unified_data = render_unified_attach_bar(key=f"unified_bar_{st.session_state.file_uploader_key}")
-        if unified_data:
-            # 1. File or Clipboard Image Upload
-            if unified_data.get("kind") == "file":
-                st.session_state.active_file = {
-                    "path": unified_data["path"],
-                    "type": unified_data["type"],
-                    "name": unified_data["name"],
-                    "size_mb": unified_data["size_mb"]
-                }
-                st.session_state.active_link = None
-                st.session_state.active_df = None
-                if unified_data["type"] == "excel":
-                    try:
-                        ext = unified_data["name"].split(".")[-1].lower()
-                        st.session_state.active_df = pd.read_csv(unified_data["path"]) if ext == "csv" else pd.read_excel(unified_data["path"])
-                    except Exception:
-                        pass
+        # 1. URL / Link input with Attach button in a single sleek row
+        col_url, col_attach = st.columns([3.4, 1.2])
+        with col_url:
+            url_input = st.text_input(
+                "Paste URL",
+                placeholder="🔗 Paste YouTube, Web, or Image Link...",
+                key=f"unified_url_input_{st.session_state.file_uploader_key}",
+                label_visibility="collapsed"
+            )
+        with col_attach:
+            attach_clicked = st.button("Attach", key=f"unified_attach_btn_{st.session_state.file_uploader_key}", use_container_width=True)
+
+        if attach_clicked and url_input.strip():
+            with st.spinner("Inspecting link..."):
+                info = st.session_state.assistant.link_service.fetch_link_info(url_input.strip())
+                if info.get("category") == "image" and info.get("path"):
+                    st.session_state.active_file = {
+                        "path": info["path"],
+                        "type": "image",
+                        "name": info.get("title", "Web Image"),
+                        "size_mb": round(os.path.getsize(info["path"]) / (1024 * 1024), 2)
+                    }
+                    st.session_state.active_link = None
+                    st.session_state.active_df = None
+                else:
+                    st.session_state.active_link = info
+                    st.session_state.active_file = None
+                    st.session_state.active_df = None
                 st.rerun()
 
-            # 2. Link or Web Image URL
-            elif unified_data.get("kind") == "link":
-                url_str = unified_data["url"].strip()
-                if url_str:
-                    with st.spinner("Inspecting link..."):
-                        info = st.session_state.assistant.link_service.fetch_link_info(url_str)
-                        if info.get("category") == "image" and info.get("path"):
-                            st.session_state.active_file = {
-                                "path": info["path"],
-                                "type": "image",
-                                "name": info.get("title", "Web Image"),
-                                "size_mb": round(os.path.getsize(info["path"]) / (1024 * 1024), 2)
-                            }
-                            st.session_state.active_link = None
-                            st.session_state.active_df = None
-                        else:
-                            st.session_state.active_link = info
-                            st.session_state.active_file = None
-                            st.session_state.active_df = None
-                        st.rerun()
+        # 2. Direct File Drop & Browse (PDF, Images, Video, Audio, CSV, Excel)
+        uploaded_file = st.file_uploader(
+            "📁 Drag & Drop or Browse File",
+            type=["pdf", "xlsx", "csv", "png", "jpg", "jpeg", "webp", "bmp", "gif", "svg", "jfif", "tiff", "ico", "mp3", "wav", "mp4"],
+            key=f"uploader_{st.session_state.file_uploader_key}",
+            label_visibility="collapsed"
+        )
 
-        # Display Active Attachment Status Pill (if attached)
+        if uploaded_file is not None:
+            file_ext = uploaded_file.name.split(".")[-1].lower()
+            image_exts = ["png", "jpg", "jpeg", "webp", "bmp", "gif", "svg", "jfif", "tiff", "ico"]
+            cat = "image" if file_ext in image_exts else \
+                  "audio" if file_ext in ["mp3", "wav"] else \
+                  "video" if file_ext in ["mp4", "mov"] else \
+                  "excel" if file_ext in ["xlsx", "csv"] else \
+                  "pdf" if file_ext == "pdf" else "text"
+
+            temp_dir = tempfile.gettempdir()
+            temp_path = os.path.join(temp_dir, uploaded_file.name)
+            with open(temp_path, "wb") as f:
+                f.write(uploaded_file.getbuffer())
+
+            st.session_state.active_file = {
+                "path": temp_path,
+                "type": cat,
+                "name": uploaded_file.name,
+                "size_mb": round(uploaded_file.size / (1024 * 1024), 2)
+            }
+            st.session_state.active_link = None
+            if cat == "excel":
+                try:
+                    st.session_state.active_df = pd.read_csv(temp_path) if file_ext == "csv" else pd.read_excel(temp_path)
+                except Exception:
+                    pass
+            st.rerun()
+
+        # 3. Active Attachment Status Pill (if attached)
         if st.session_state.active_file:
             f_info = st.session_state.active_file
             icon = "🖼️" if f_info.get("type") == "image" else "🎥" if f_info.get("type") == "video" else "📄"
