@@ -105,6 +105,43 @@ def init_db():
     );
     """)
 
+    # 7. Document Management Table
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS documents (
+        doc_id TEXT PRIMARY KEY,
+        filename TEXT NOT NULL,
+        file_type TEXT NOT NULL,          -- 'pdf', 'docx', 'pptx', 'txt', 'csv', 'excel', 'image', 'video', 'audio', 'url'
+        file_size_bytes INTEGER DEFAULT 0,
+        storage_path TEXT,
+        source_url TEXT,
+        upload_timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        processing_status TEXT DEFAULT 'Uploaded', -- 'Uploading', 'Uploaded', 'Processing', 'Extracting Content', 'Generating Embeddings', 'Indexing', 'Ready', 'Failed'
+        extraction_status TEXT DEFAULT 'Pending',   -- 'Pending', 'In Progress', 'Completed', 'Failed'
+        embedding_status TEXT DEFAULT 'Pending',    -- 'Pending', 'In Progress', 'Completed', 'Failed'
+        indexing_status TEXT DEFAULT 'Pending',     -- 'Pending', 'In Progress', 'Completed', 'Failed'
+        page_count INTEGER DEFAULT 0,
+        chunk_count INTEGER DEFAULT 0,
+        error_message TEXT,
+        summary TEXT,
+        metadata_json TEXT
+    );
+    """)
+
+    # 8. Document Chunks Table (SQLite mirror of vector embeddings)
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS document_chunks (
+        chunk_id TEXT PRIMARY KEY,
+        doc_id TEXT NOT NULL,
+        chunk_index INTEGER NOT NULL,
+        page_number INTEGER,
+        timestamp_str TEXT,
+        content TEXT NOT NULL,
+        metadata_json TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (doc_id) REFERENCES documents(doc_id) ON DELETE CASCADE
+    );
+    """)
+
     conn.commit()
 
     # Seed Default Data if empty

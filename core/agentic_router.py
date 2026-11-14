@@ -34,6 +34,7 @@ class AgentState(TypedDict):
     route: Optional[str]
     response: Optional[str]
     mode: Optional[str] # 'auto', 'doc_qa', 'personal', 'general', 'link'
+    active_doc_id: Optional[str]
 
 class AgenticAssistant:
     def __init__(self, api_key: Optional[str] = None):
@@ -46,13 +47,21 @@ class AgenticAssistant:
         """Allows hot-swapping API key from UI."""
         self.gemini = GeminiService(api_key=api_key)
 
-    def classify_intent(self, query: str, file_type: Optional[str], mode: str = "auto", attached_link: Optional[Dict[str, Any]] = None) -> str:
+    def classify_intent(
+        self,
+        query: str,
+        file_type: Optional[str],
+        mode: str = "auto",
+        attached_link: Optional[Dict[str, Any]] = None,
+        active_doc_id: Optional[str] = None
+    ) -> str:
         """
         Determines which engine should handle the query.
-        When a document, video, or data file is attached, the searching bar is FIRMLY ATTACHED to the document!
-        When a link (YouTube, webpage, image, movie) is attached or present, routes to LINK_ANALYSIS!
+        When a document, video, or data file is attached or an active document is selected,
+        the searching bar is FIRMLY ATTACHED to the document (MULTIMODAL_RAG).
+        When a link (YouTube, webpage, image, movie) is attached or present, routes to LINK_ANALYSIS.
         """
-        if mode == "doc_qa" and file_type:
+        if mode == "doc_qa":
             return "STRUCTURED_DATA" if file_type in ["excel", "csv"] else "MULTIMODAL_RAG"
         elif mode == "link" or attached_link:
             return "LINK_ANALYSIS"
@@ -67,8 +76,8 @@ class AgenticAssistant:
 
         q_lower = query.lower().strip()
 
-        # Pure standalone greetings (only when NO file is attached)
-        if not file_type and q_lower in ["hi", "hello", "hey", "hlo", "hii", "who are you"]:
+        # Pure standalone greetings (only when NO file or active doc is attached)
+        if not file_type and not active_doc_id and q_lower in ["hi", "hello", "hey", "hlo", "hii", "who are you"]:
             return "GENERAL_CHAT"
 
         # Explicit Indian Festival / Calendar triggers (e.g. "when is diwali", "upcoming birthdays")
@@ -81,22 +90,31 @@ class AgenticAssistant:
         has_doc_keywords = any(w in q_lower for w in [
             "summary", "summarize", "document", "video", "audio", "pdf", "file",
             "attached", "takeaways", "notes", "point", "points", "explain", "important",
-            "what is this", "tell me about", "exam", "concepts", "key"
+            "what is this", "tell me about", "exam", "concepts", "key", "chapter", "triad", "section"
         ])
 
         # If it's a genuine festival/calendar query without referring to a document
-        if is_personal and not has_doc_keywords and not file_type:
+        if is_personal and not has_doc_keywords and not file_type and not active_doc_id:
             return "PERSONAL_MEMORY"
 
         # -------------------------------------------------------------
-        # IF A DOCUMENT OR FILE IS ATTACHED:
-        # The searching bar is ATTACHED TO THE ATTACHED FILE!
+        # IF A DOCUMENT OR FILE IS ATTACHED OR AN ACTIVE DOC IS SELECTED:
+        # The searching bar is ATTACHED TO THE DOCUMENT!
         # -------------------------------------------------------------
         if file_type:
             if file_type in ["excel", "csv"]:
                 return "STRUCTURED_DATA"
             else:
                 return "MULTIMODAL_RAG"
+
+        if active_doc_id:
+            return "MULTIMODAL_RAG"
+
+        # Check if indexed ready documents exist in the vector database
+        from database.models import list_documents
+        ready_docs = list_documents(status="Ready")
+        if ready_docs and (has_doc_keywords or not is_personal):
+            return "MULTIMODAL_RAG"
 
         if is_personal:
             return "PERSONAL_MEMORY"
@@ -174,7 +192,14 @@ class AgenticAssistant:
 
         # 1. Routing Decision
         attached_link = state.get("attached_link")
-        route = self.classify_intent(query, file_type, mode, attached_link=attached_link)
+        active_doc_id = state.get("active_doc_id")
+        route = self.classify_intent(
+            query,
+            file_type,
+            mode,
+            attached_link=attached_link,
+            active_doc_id=active_doc_id
+        )
         state["route"] = route
 
         # 2. Dispatch
@@ -205,17 +230,18 @@ class AgenticAssistant:
                 output = "Please upload an Excel (.xlsx) or CSV file to perform tabular computations."
 
         elif route == "MULTIMODAL_RAG":
-            if file_path and file_type:
+            # Primary: Execute hybrid vector & lexical RAG with strict grounding and citations
+            rag_res = self.rag_engine.answer_rag_query(query, doc_id=active_doc_id, gemini_service=self.gemini)
+            
+            # If RAG found indexed chunks, return the grounded answer with citations
+            if rag_res.get("chunks_used", 0) > 0:
+                output = rag_res["answer"]
+            elif file_path and file_type:
+                # Direct multimodal file fallback (if file was attached but not yet indexed)
                 output = self.gemini.analyze_multimodal_file(file_path, file_type, query)
             else:
-                context = self.rag_engine.retrieve_relevant_context(query)
-                prompt = (
-                    f"You are Agent Rag, an expert document intelligence assistant.\n"
-                    f"Retrieved Document Context:\n{context}\n\n"
-                    f"User Question: {query}\n\n"
-                    "Provide a comprehensive answer citing the context."
-                )
-                output = self.gemini.generate_chat_response(prompt)
+                # Grounded anti-hallucination response
+                output = rag_res.get("answer", "I could not find this information in your uploaded documents.")
 
         elif route == "PERSONAL_MEMORY":
             output = self.handle_personal_memory(query, user_id, user_name)

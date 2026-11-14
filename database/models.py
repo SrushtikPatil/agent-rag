@@ -146,3 +146,197 @@ def save_interaction_summary(user_id: str, summary: str, topics: List[str]):
     """, (user_id, now_str, json.dumps(topics), json.dumps([]), "engaged", summary))
     conn.commit()
     conn.close()
+
+# ---------------------------------------------------------------------------
+# Document Management & Chunk Tracking DAL
+# ---------------------------------------------------------------------------
+
+def create_document(
+    doc_id: str,
+    filename: str,
+    file_type: str,
+    file_size_bytes: int = 0,
+    storage_path: str = "",
+    source_url: str = "",
+    metadata_dict: Optional[Dict[str, Any]] = None
+) -> Dict[str, Any]:
+    """Registers a newly uploaded document or URL in SQLite."""
+    conn = get_connection()
+    cursor = conn.cursor()
+    meta_json = json.dumps(metadata_dict or {})
+    
+    cursor.execute("""
+        INSERT OR REPLACE INTO documents (
+            doc_id, filename, file_type, file_size_bytes, storage_path, 
+            source_url, processing_status, extraction_status, embedding_status, 
+            indexing_status, page_count, chunk_count, error_message, metadata_json
+        ) VALUES (?, ?, ?, ?, ?, ?, 'Uploaded', 'Pending', 'Pending', 'Pending', 0, 0, NULL, ?)
+    """, (doc_id, filename, file_type, file_size_bytes, storage_path, source_url, meta_json))
+    
+    conn.commit()
+    cursor.execute("SELECT * FROM documents WHERE doc_id = ?", (doc_id,))
+    row = cursor.fetchone()
+    conn.close()
+    return dict(row) if row else {}
+
+def update_document_status(
+    doc_id: str,
+    processing_status: Optional[str] = None,
+    extraction_status: Optional[str] = None,
+    embedding_status: Optional[str] = None,
+    indexing_status: Optional[str] = None,
+    page_count: Optional[int] = None,
+    chunk_count: Optional[int] = None,
+    error_message: Optional[str] = None,
+    summary: Optional[str] = None
+):
+    """Updates the granular processing, extraction, embedding, and indexing status of a document."""
+    conn = get_connection()
+    cursor = conn.cursor()
+    
+    fields = []
+    values = []
+    
+    if processing_status is not None:
+        fields.append("processing_status = ?")
+        values.append(processing_status)
+    if extraction_status is not None:
+        fields.append("extraction_status = ?")
+        values.append(extraction_status)
+    if embedding_status is not None:
+        fields.append("embedding_status = ?")
+        values.append(embedding_status)
+    if indexing_status is not None:
+        fields.append("indexing_status = ?")
+        values.append(indexing_status)
+    if page_count is not None:
+        fields.append("page_count = ?")
+        values.append(page_count)
+    if chunk_count is not None:
+        fields.append("chunk_count = ?")
+        values.append(chunk_count)
+    if error_message is not None:
+        fields.append("error_message = ?")
+        values.append(error_message)
+    if summary is not None:
+        fields.append("summary = ?")
+        values.append(summary)
+
+    if fields:
+        values.append(doc_id)
+        query = f"UPDATE documents SET {', '.join(fields)} WHERE doc_id = ?"
+        cursor.execute(query, tuple(values))
+        conn.commit()
+    conn.close()
+
+def get_document(doc_id: str) -> Optional[Dict[str, Any]]:
+    """Retrieves document record by doc_id."""
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM documents WHERE doc_id = ?", (doc_id,))
+    row = cursor.fetchone()
+    conn.close()
+    return dict(row) if row else None
+
+def list_documents(status: Optional[str] = None) -> List[Dict[str, Any]]:
+    """Lists registered documents, optionally filtered by processing status."""
+    conn = get_connection()
+    cursor = conn.cursor()
+    if status:
+        cursor.execute("SELECT * FROM documents WHERE processing_status = ? ORDER BY upload_timestamp DESC", (status,))
+    else:
+        cursor.execute("SELECT * FROM documents ORDER BY upload_timestamp DESC")
+    rows = cursor.fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+def delete_document(doc_id: str) -> bool:
+    """Deletes a document and its chunks from SQLite."""
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("DELETE FROM document_chunks WHERE doc_id = ?", (doc_id,))
+    cursor.execute("DELETE FROM documents WHERE doc_id = ?", (doc_id,))
+    conn.commit()
+    conn.close()
+    return True
+
+def insert_document_chunks(doc_id: str, chunks: List[Dict[str, Any]]):
+    """Inserts a batch of extracted chunks into SQLite."""
+    if not chunks:
+        return
+    conn = get_connection()
+    cursor = conn.cursor()
+    # Delete existing chunks for this doc first to prevent duplication
+    cursor.execute("DELETE FROM document_chunks WHERE doc_id = ?", (doc_id,))
+    
+    rows = []
+    for c in chunks:
+        meta_str = json.dumps(c.get("metadata", {}))
+        rows.append((
+            c["chunk_id"],
+            doc_id,
+            c.get("chunk_index", 0),
+            c.get("page_number", 1),
+            c.get("timestamp_str", ""),
+            c.get("content", ""),
+            meta_str
+        ))
+        
+    cursor.executemany("""
+        INSERT INTO document_chunks (chunk_id, doc_id, chunk_index, page_number, timestamp_str, content, metadata_json)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+    """, rows)
+    conn.commit()
+    conn.close()
+
+def get_document_chunks(doc_id: str) -> List[Dict[str, Any]]:
+    """Retrieves all chunks for a specific document."""
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM document_chunks WHERE doc_id = ? ORDER BY chunk_index ASC", (doc_id,))
+    rows = cursor.fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+def search_chunks_lexical(query: str, doc_id: Optional[str] = None, limit: int = 5) -> List[Dict[str, Any]]:
+    """
+    High-speed keyword / lexical search across document chunks.
+    Provides robust fallback when vector embeddings are unavailable or offline.
+    """
+    conn = get_connection()
+    cursor = conn.cursor()
+    
+    tokens = [t.strip().lower() for t in query.split() if len(t.strip()) > 2]
+    if not tokens:
+        tokens = [query.strip().lower()]
+        
+    like_clauses = " OR ".join(["LOWER(content) LIKE ?" for _ in tokens])
+    params = [f"%{t}%" for t in tokens]
+    
+    if doc_id:
+        sql = f"""
+            SELECT c.*, d.filename, d.file_type 
+            FROM document_chunks c 
+            JOIN documents d ON c.doc_id = d.doc_id 
+            WHERE c.doc_id = ? AND ({like_clauses})
+            LIMIT ?
+        """
+        full_params = [doc_id] + params + [limit]
+    else:
+        sql = f"""
+            SELECT c.*, d.filename, d.file_type 
+            FROM document_chunks c 
+            JOIN documents d ON c.doc_id = d.doc_id 
+            WHERE ({like_clauses})
+            LIMIT ?
+        """
+        full_params = params + [limit]
+        
+    try:
+        cursor.execute(sql, tuple(full_params))
+        rows = cursor.fetchall()
+        conn.close()
+        return [dict(r) for r in rows]
+    except Exception:
+        conn.close()
+        return []

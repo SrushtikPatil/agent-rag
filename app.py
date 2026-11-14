@@ -33,7 +33,16 @@ importlib.reload(core.rag_engine)
 importlib.reload(core.agentic_router)
 
 from database.db import init_db
-from database.models import get_user_profile, add_contact_event, get_contact_events, get_festivals
+from database.models import (
+    get_user_profile,
+    add_contact_event,
+    get_contact_events,
+    get_festivals,
+    list_documents,
+    get_document,
+    delete_document as db_delete_document,
+    get_document_chunks
+)
 from core.proactive_engine import get_proactive_briefing
 from core.agentic_router import AgenticAssistant, AgentState
 
@@ -557,6 +566,114 @@ st.markdown("""
         margin-bottom: 6px;
     }
 
+    /* Tab Navigation Styles */
+    .stTabs [data-baseweb="tab-list"] {
+        gap: 8px;
+        background: transparent;
+        border-bottom: 2px solid #e0f2fe;
+        margin-bottom: 1.5rem;
+    }
+    .stTabs [data-baseweb="tab"] {
+        font-weight: 600;
+        font-size: 0.95rem;
+        color: #64748b;
+        border-radius: 8px 8px 0 0;
+        padding: 10px 18px;
+        border: none !important;
+    }
+    .stTabs [aria-selected="true"] {
+        color: #0284c7 !important;
+        border-bottom: 3px solid #0284c7 !important;
+        background: rgba(2, 132, 199, 0.05) !important;
+    }
+
+    /* KPI Summary Cards & Document Management Cards */
+    .kpi-card {
+        background: #ffffff;
+        border: 1px solid #e0f2fe;
+        border-radius: 12px;
+        padding: 14px 18px;
+        text-align: center;
+        box-shadow: 0 1px 4px rgba(2, 132, 199, 0.05);
+    }
+    .kpi-value {
+        font-size: 1.8rem;
+        font-weight: 800;
+        color: #0369a1;
+        line-height: 1.1;
+    }
+    .kpi-label {
+        font-size: 0.8rem;
+        font-weight: 600;
+        color: #64748b;
+        margin-top: 4px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    .doc-item-card {
+        background: #ffffff;
+        border: 1.5px solid #e0f2fe;
+        border-radius: 14px;
+        padding: 16px 20px;
+        margin-bottom: 14px;
+        box-shadow: 0 1px 6px rgba(2, 132, 199, 0.06);
+        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .doc-item-card:hover {
+        border-color: #7dd3fc;
+        box-shadow: 0 4px 16px rgba(2, 132, 199, 0.14);
+    }
+    .status-pill-ready {
+        background: #ecfdf5;
+        color: #059669;
+        font-weight: 700;
+        font-size: 0.76rem;
+        padding: 3px 10px;
+        border-radius: 9999px;
+        border: 1px solid #a7f3d0;
+    }
+    .status-pill-progress {
+        background: #eff6ff;
+        color: #2563eb;
+        font-weight: 700;
+        font-size: 0.76rem;
+        padding: 3px 10px;
+        border-radius: 9999px;
+        border: 1px solid #bfdbfe;
+    }
+    .status-pill-failed {
+        background: #fef2f2;
+        color: #dc2626;
+        font-weight: 700;
+        font-size: 0.76rem;
+        padding: 3px 10px;
+        border-radius: 9999px;
+        border: 1px solid #fecaca;
+    }
+    .type-pill {
+        background: #f1f5f9;
+        color: #475569;
+        font-weight: 700;
+        font-size: 0.72rem;
+        padding: 2px 8px;
+        border-radius: 6px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    .active-target-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        background: #f0fdf4;
+        border: 1.5px solid #86efac;
+        color: #166534;
+        padding: 8px 16px;
+        border-radius: 12px;
+        font-size: 0.88rem;
+        font-weight: 600;
+        margin-bottom: 12px;
+    }
+
     /* Mobile & Tablet Responsive Optimizations (Show same clean UI on mobile devices) */
     @media (max-width: 768px) {
         .block-container {
@@ -624,6 +741,12 @@ st.session_state.assistant = AgenticAssistant(api_key=st.session_state.api_key)
 
 if "active_file" not in st.session_state:
     st.session_state.active_file = None
+
+if "active_doc_id" not in st.session_state:
+    st.session_state.active_doc_id = None
+
+if "search_target_doc" not in st.session_state:
+    st.session_state.search_target_doc = "ALL"
 
 if "active_link" not in st.session_state:
     st.session_state.active_link = None
@@ -802,148 +925,403 @@ contact_events = briefing["contact_events"]
 
 preset_action = None
 
-# If chat is empty, render the classy Claude/Gemini style greeting
-if len(st.session_state.messages) == 0:
-    robot_tag = f'<img src="data:image/png;base64,{robot_b64}" width="48" height="48" style="border-radius: 50%; box-shadow: 0 4px 12px rgba(2, 132, 199, 0.22); border: 2px solid #7dd3fc;">' if robot_b64 else '<span>🤖</span>'
-    st.markdown(f"""
-    <div class="hero-wrapper">
-        <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px;">
-            {robot_tag}
-            <div class="hero-badge" style="margin-bottom: 0;">AGENT RAG</div>
+# Top Navigation Tabs for Full Multimodal Workspace
+tab_chat, tab_dashboard, tab_search = st.tabs([
+    "💬 Chat & Copilot",
+    "📑 Document Management Dashboard",
+    "🔍 RAG Search Explorer"
+])
+
+# ===========================================================================
+# TAB 1: Chat & Copilot
+# ===========================================================================
+with tab_chat:
+    # Active Targeted Document Banner (if selected from dashboard or attachment)
+    if st.session_state.get("active_doc_id"):
+        target_rec = get_document(st.session_state.active_doc_id)
+        if target_rec:
+            col_target_info, col_target_clear = st.columns([3.8, 1.2], vertical_alignment="center")
+            with col_target_info:
+                f_sz = round((target_rec.get("file_size_bytes") or 0) / (1024 * 1024), 2)
+                st.markdown(
+                    f'<div class="active-target-badge">🎯 Active Targeted Document: <b>{target_rec["filename"]}</b> '
+                    f'({f_sz} MB • {target_rec.get("page_count", 1)} pages)</div>',
+                    unsafe_allow_html=True
+                )
+            with col_target_clear:
+                if st.button("Detach Target", key="detach_active_doc_target", use_container_width=True):
+                    st.session_state.active_doc_id = None
+                    st.session_state.active_file = None
+                    st.rerun()
+
+    # If chat is empty, render the classy Claude/Gemini style greeting
+    if len(st.session_state.messages) == 0:
+        robot_tag = f'<img src="data:image/png;base64,{robot_b64}" width="48" height="48" style="border-radius: 50%; box-shadow: 0 4px 12px rgba(2, 132, 199, 0.22); border: 2px solid #7dd3fc;">' if robot_b64 else '<span>🤖</span>'
+        st.markdown(f"""
+        <div class="hero-wrapper">
+            <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px;">
+                {robot_tag}
+                <div class="hero-badge" style="margin-bottom: 0;">AGENT RAG</div>
+            </div>
+            <div class="hero-title">{time_info['greeting']}, {user_name}</div>
+            <div class="hero-subtitle">How can I assist you with your research, documents, or intelligence workflows today?</div>
         </div>
-        <div class="hero-title">{time_info['greeting']}, {user_name}</div>
-        <div class="hero-subtitle">How can I assist you with your research, documents, or intelligence workflows today?</div>
-    </div>
-    """, unsafe_allow_html=True)
+        """, unsafe_allow_html=True)
 
-    # Compact Side-by-Side: Festive Indicator Beside Birthday Reminder
-    active_bdays = [
-        ev for ev in (contact_events or [])
-        if f"{ev.get('contact_name')}_{ev.get('event_type')}_{ev.get('event_month')}_{ev.get('event_day')}" not in st.session_state.dismissed_birthday_alerts
-    ]
-    top_bday = active_bdays[0] if active_bdays else None
+        # Compact Side-by-Side: Festive Indicator Beside Birthday Reminder
+        active_bdays = [
+            ev for ev in (contact_events or [])
+            if f"{ev.get('contact_name')}_{ev.get('event_type')}_{ev.get('event_month')}_{ev.get('event_day')}" not in st.session_state.dismissed_birthday_alerts
+        ]
+        top_bday = active_bdays[0] if active_bdays else None
 
-    if active_festival or top_bday:
-        col_fest, col_bday = st.columns([1, 1], vertical_alignment="center")
+        if active_festival or top_bday:
+            col_fest, col_bday = st.columns([1, 1], vertical_alignment="center")
 
-        # Left: Festival Pill
-        if active_festival:
-            with col_fest:
-                f_name = active_festival.get('name') or active_festival.get('festival_name')
-                d = active_festival['days_remaining']
-                d_str = "Today! 🪔" if d == 0 else f"in {d} days ({active_festival.get('event_date', '')})"
-                st.markdown(f"""
-                <div class="festival-pill">
-                    <span>🪔</span>
-                    <span><b>{f_name}</b> is {d_str}</span>
+            # Left: Festival Pill
+            if active_festival:
+                with col_fest:
+                    f_name = active_festival.get('name') or active_festival.get('festival_name')
+                    d = active_festival['days_remaining']
+                    d_str = "Today! 🪔" if d == 0 else f"in {d} days ({active_festival.get('event_date', '')})"
+                    st.markdown(f"""
+                    <div class="festival-pill">
+                        <span>🪔</span>
+                        <span><b>{f_name}</b> is {d_str}</span>
+                    </div>
+                    """, unsafe_allow_html=True)
+
+            # Right (Beside Festive Pill): Matching Birthday Pill & Actions
+            if top_bday:
+                with col_bday:
+                    ev = top_bday
+                    ev_id = f"{ev.get('contact_name')}_{ev.get('event_type')}_{ev.get('event_month')}_{ev.get('event_day')}"
+                    d = ev['days_remaining']
+                    when_str = "Today" if d == 0 else f"in {d}d"
+                    
+                    b_pill, b_btn, b_x = st.columns([2.5, 0.9, 0.45], vertical_alignment="center")
+                    with b_pill:
+                        st.markdown(f"""
+                        <div class="birthday-pill">
+                            <span>🎂</span>
+                            <span><b>{ev['contact_name']}</b> · {when_str}</span>
+                        </div>
+                        """, unsafe_allow_html=True)
+                    with b_btn:
+                        if st.button("Wish", key=f"wish_{ev_id}", use_container_width=True):
+                            preset_action = f"Generate 3 warm and creative {ev['event_type']} wishes for my {ev['relationship']} {ev['contact_name']}."
+                    with b_x:
+                        if st.button("✕", key=f"close_{ev_id}", help="Dismiss", use_container_width=True):
+                            st.session_state.dismissed_birthday_alerts.add(ev_id)
+                            st.rerun()
+
+        st.write("")
+
+        # Refined Starter Chips (Clean, text-only, no clunky emoji buttons)
+        st.caption("Suggested Prompts")
+        c1, c2, c3 = st.columns(3)
+        with c1:
+            if st.button("Diwali wishes for colleagues", key="chip_fest", use_container_width=True):
+                preset_action = "Draft 3 professional and warm Diwali wishes for my colleagues."
+        with c2:
+            if st.button("Upcoming birthdays this week", key="chip_bday", use_container_width=True):
+                preset_action = "Who has an upcoming birthday this week and what should I send them?"
+        with c3:
+            if st.button("Explain quantum computing simply", key="chip_ai", use_container_width=True):
+                preset_action = "Explain quantum computing in simple terms with a real-world analogy."
+
+    # Active Document Toolbar (Refined, elegant pills)
+    if st.session_state.active_file:
+        f_info = st.session_state.active_file
+        st.markdown(f"""
+        <div class="document-chip">
+            <span>📄</span>
+            <span><b>{f_info['name']}</b> ({f_info['size_mb']} MB)</span>
+        </div>
+        """, unsafe_allow_html=True)
+
+        doc_c1, doc_c2, doc_c3, doc_c4 = st.columns(4)
+        if doc_c1.button("Summarize", use_container_width=True):
+            preset_action = f"Provide a comprehensive summary and key takeaways of '{f_info['name']}'."
+        if doc_c2.button("Exam Questions & Answers", use_container_width=True):
+            preset_action = f"Generate 5 important questions and detailed answers based on the contents of '{f_info['name']}'."
+        if doc_c3.button("Key Concepts", use_container_width=True):
+            preset_action = f"Extract the core topics, definitions, and concepts from '{f_info['name']}'."
+        if doc_c4.button("Revision Notes", use_container_width=True):
+            preset_action = f"Create concise study and revision notes based on '{f_info['name']}'."
+
+    elif st.session_state.get("active_link"):
+        l_info = st.session_state.active_link
+        l_cat = l_info.get("category", "link")
+        icon = "🎥" if l_cat == "youtube" else "🖼️" if l_cat == "image" else "🌐"
+        st.markdown(f"""
+        <div class="document-chip">
+            <span>{icon}</span>
+            <span><b>{l_info.get('title', 'Web Link')}</b> ({l_cat.upper()})</span>
+        </div>
+        """, unsafe_allow_html=True)
+
+        link_c1, link_c2, link_c3, link_c4 = st.columns(4)
+        if link_c1.button("Summarize", key="act_link_sum", use_container_width=True):
+            preset_action = f"Provide a comprehensive summary and key takeaways of '{l_info.get('title')}'."
+        if link_c2.button("Exam Questions & Answers", key="act_link_qa", use_container_width=True):
+            preset_action = f"Generate 5 important questions and detailed answers based on the contents of '{l_info.get('title')}'."
+        if link_c3.button("Key Concepts", key="act_link_concepts", use_container_width=True):
+            preset_action = f"Extract the core topics, definitions, and concepts from '{l_info.get('title')}'."
+        if link_c4.button("Revision Notes", key="act_link_notes", use_container_width=True):
+            preset_action = f"Create concise study and revision notes based on '{l_info.get('title')}'."
+
+    # Chat Feed
+    asst_avatar = ROBOT_AVATAR_PATH if os.path.exists(ROBOT_AVATAR_PATH) else "🤖"
+
+    for msg in st.session_state.messages:
+        is_user = msg["role"] == "user"
+        avatar = "👤" if is_user else asst_avatar
+        
+        with st.chat_message(msg["role"], avatar=avatar):
+            st.markdown(msg["content"])
+            
+            # Subtle, professional citation footnote
+            if not is_user and msg.get("route") == "MULTIMODAL_RAG":
+                st.markdown("""
+                <div class="source-footnote">
+                    <span>📄</span> Grounded retrieval with verified document citations
+                </div>
+                """, unsafe_allow_html=True)
+            elif not is_user and msg.get("route") == "LINK_ANALYSIS":
+                st.markdown("""
+                <div class="source-footnote">
+                    <span>🔗</span> Referenced from online link
                 </div>
                 """, unsafe_allow_html=True)
 
-        # Right (Beside Festive Pill): Matching Birthday Pill & Actions
-        if top_bday:
-            with col_bday:
-                ev = top_bday
-                ev_id = f"{ev.get('contact_name')}_{ev.get('event_type')}_{ev.get('event_month')}_{ev.get('event_day')}"
-                d = ev['days_remaining']
-                when_str = "Today" if d == 0 else f"in {d}d"
-                
-                b_pill, b_btn, b_x = st.columns([2.5, 0.9, 0.45], vertical_alignment="center")
-                with b_pill:
-                    st.markdown(f"""
-                    <div class="birthday-pill">
-                        <span>🎂</span>
-                        <span><b>{ev['contact_name']}</b> · {when_str}</span>
-                    </div>
-                    """, unsafe_allow_html=True)
-                with b_btn:
-                    if st.button("Wish", key=f"wish_{ev_id}", use_container_width=True):
-                        preset_action = f"Generate 3 warm and creative {ev['event_type']} wishes for my {ev['relationship']} {ev['contact_name']}."
-                with b_x:
-                    if st.button("✕", key=f"close_{ev_id}", help="Dismiss", use_container_width=True):
-                        st.session_state.dismissed_birthday_alerts.add(ev_id)
-                        st.rerun()
+# ===========================================================================
+# TAB 2: Document Management Dashboard
+# ===========================================================================
+with tab_dashboard:
+    st.markdown("### 📑 Document Management Dashboard")
+    st.caption("Upload, inspect, reprocess, and manage all your documents and multi-modal knowledge sources.")
+
+    # 1. Metrics Overview
+    all_docs = list_documents()
+    ready_docs = [d for d in all_docs if d.get("processing_status") == "Ready"]
+    proc_docs = [d for d in all_docs if d.get("processing_status") not in ["Ready", "Failed"]]
+    failed_docs = [d for d in all_docs if d.get("processing_status") == "Failed"]
+
+    m1, m2, m3, m4 = st.columns(4)
+    with m1:
+        st.markdown(f'<div class="kpi-card"><div class="kpi-value">{len(all_docs)}</div><div class="kpi-label">Total Documents</div></div>', unsafe_allow_html=True)
+    with m2:
+        st.markdown(f'<div class="kpi-card"><div class="kpi-value" style="color:#059669;">{len(ready_docs)}</div><div class="kpi-label">Ready & Searchable</div></div>', unsafe_allow_html=True)
+    with m3:
+        st.markdown(f'<div class="kpi-card"><div class="kpi-value" style="color:#2563eb;">{len(proc_docs)}</div><div class="kpi-label">In Processing</div></div>', unsafe_allow_html=True)
+    with m4:
+        st.markdown(f'<div class="kpi-card"><div class="kpi-value" style="color:#dc2626;">{len(failed_docs)}</div><div class="kpi-label">Failed</div></div>', unsafe_allow_html=True)
+
+    st.write("")
+    
+    # 2. Ingestion Section: Multi-File & URL Ingestion
+    with st.expander("📤 Upload New Documents or Ingest Web Links", expanded=(len(all_docs) == 0)):
+        tab_up_file, tab_up_url = st.tabs(["📁 Multi-File Upload", "🌐 Ingest Web URL / YouTube"])
+        with tab_up_file:
+            uploaded_files = st.file_uploader(
+                "Upload Multiple Documents (PDF, DOCX, DOC, PPTX, TXT, CSV, XLSX, Images, Videos, Audio)",
+                type=["pdf", "docx", "doc", "pptx", "txt", "csv", "xlsx", "xls", "png", "jpg", "jpeg", "webp", "mp4", "mov", "avi", "mkv", "mp3", "wav", "m4a"],
+                accept_multiple_files=True,
+                key=f"dash_multi_uploader_{st.session_state.file_uploader_key}"
+            )
+            if uploaded_files:
+                if st.button(f"📥 Process & Index {len(uploaded_files)} File(s)", type="primary", use_container_width=True):
+                    prog = st.progress(0, text="Starting batch ingestion...")
+                    for idx_f, f in enumerate(uploaded_files):
+                        prog.progress((idx_f) / len(uploaded_files), text=f"Processing {f.name}...")
+                        temp_p = os.path.join(tempfile.gettempdir(), f.name)
+                        with open(temp_p, "wb") as out_f:
+                            out_f.write(f.getbuffer())
+                        res = st.session_state.assistant.rag_engine.ingest_file(
+                            src_file_path=temp_p,
+                            filename=f.name,
+                            gemini_service=st.session_state.assistant.gemini
+                        )
+                    prog.progress(1.0, text="Batch processing completed!")
+                    st.success(f"Indexed {len(uploaded_files)} document(s) successfully!")
+                    st.session_state.file_uploader_key += 1
+                    st.rerun()
+
+        with tab_up_url:
+            col_u1, col_u2 = st.columns([3.5, 1])
+            with col_u1:
+                dash_url_val = st.text_input("Enter Web URL, YouTube link, or Wikipedia page", placeholder="https://...", key="dash_url_input")
+            with col_u2:
+                if st.button("Ingest Link", use_container_width=True, key="dash_url_btn"):
+                    if dash_url_val.strip():
+                        with st.spinner("Extracting content and generating embeddings..."):
+                            u_res = st.session_state.assistant.rag_engine.ingest_url(
+                                dash_url_val.strip(),
+                                gemini_service=st.session_state.assistant.gemini
+                            )
+                            if u_res.get("status") == "Ready":
+                                st.success(f"Indexed '{u_res.get('title')}' successfully!")
+                                st.rerun()
+                            else:
+                                st.error(f"Failed to ingest URL: {u_res.get('error')}")
 
     st.write("")
 
-    # Refined Starter Chips (Clean, text-only, no clunky emoji buttons)
-    st.caption("Suggested Prompts")
-    c1, c2, c3 = st.columns(3)
-    with c1:
-        if st.button("Diwali wishes for colleagues", key="chip_fest", use_container_width=True):
-            preset_action = "Draft 3 professional and warm Diwali wishes for my colleagues."
-    with c2:
-        if st.button("Upcoming birthdays this week", key="chip_bday", use_container_width=True):
-            preset_action = "Who has an upcoming birthday this week and what should I send them?"
-    with c3:
-        if st.button("Explain quantum computing simply", key="chip_ai", use_container_width=True):
-            preset_action = "Explain quantum computing in simple terms with a real-world analogy."
+    # 3. Document Repository List
+    st.markdown("#### Uploaded Documents & Indexes")
+    if not all_docs:
+        st.info("No documents uploaded yet. Use the upload box above to add your first PDF, Office document, image, audio, video, or web link!")
+    else:
+        for doc in all_docs:
+            d_id = doc["doc_id"]
+            status = doc.get("processing_status", "Uploaded")
+            f_type = doc.get("file_type", "doc").upper()
+            size_mb = round((doc.get("file_size_bytes") or 0) / (1024 * 1024), 2)
+            pages = doc.get("page_count", 0)
+            chunks = doc.get("chunk_count", 0)
+            upload_dt = doc.get("upload_timestamp", "")
 
-# Active Document Toolbar (Refined, elegant pills)
-if st.session_state.active_file:
-    f_info = st.session_state.active_file
-    st.markdown(f"""
-    <div class="document-chip">
-        <span>📄</span>
-        <span><b>{f_info['name']}</b> ({f_info['size_mb']} MB)</span>
-    </div>
-    """, unsafe_allow_html=True)
+            # Status pill styling
+            pill_class = "status-pill-ready" if status == "Ready" else ("status-pill-failed" if status == "Failed" else "status-pill-progress")
+            status_emoji = "✅" if status == "Ready" else ("❌" if status == "Failed" else "⏳")
 
-    doc_c1, doc_c2, doc_c3, doc_c4 = st.columns(4)
-    if doc_c1.button("Summarize", use_container_width=True):
-        preset_action = f"Provide a comprehensive summary and key takeaways of '{f_info['name']}'."
-    if doc_c2.button("Exam Questions & Answers", use_container_width=True):
-        preset_action = f"Generate 5 important questions and detailed answers based on the contents of '{f_info['name']}'."
-    if doc_c3.button("Key Concepts", use_container_width=True):
-        preset_action = f"Extract the core topics, definitions, and concepts from '{f_info['name']}'."
-    if doc_c4.button("Revision Notes", use_container_width=True):
-        preset_action = f"Create concise study and revision notes based on '{f_info['name']}'."
+            with st.container():
+                st.markdown(f"""
+                <div class="doc-item-card">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <span class="type-pill">{f_type}</span>
+                            <span style="font-weight: 700; font-size: 1.05rem; color: #0f172a;">{doc['filename']}</span>
+                        </div>
+                        <span class="{pill_class}">{status_emoji} {status}</span>
+                    </div>
+                    <div style="font-size: 0.82rem; color: #64748b; margin-bottom: 10px;">
+                        <span>📦 Size: <b>{size_mb} MB</b></span> &nbsp;•&nbsp;
+                        <span>📄 Pages: <b>{pages}</b></span> &nbsp;•&nbsp;
+                        <span>🧩 Chunks: <b>{chunks}</b></span> &nbsp;•&nbsp;
+                        <span>📅 Uploaded: <b>{upload_dt}</b></span>
+                    </div>
+                    <div style="font-size: 0.78rem; color: #475569; background: #f8fafc; padding: 6px 12px; border-radius: 8px; border: 1px solid #f1f5f9; margin-bottom: 10px;">
+                        <span>Extraction: <b>{doc.get('extraction_status', 'Pending')}</b></span> &nbsp;|&nbsp;
+                        <span>Embedding: <b>{doc.get('embedding_status', 'Pending')}</b></span> &nbsp;|&nbsp;
+                        <span>Indexing: <b>{doc.get('indexing_status', 'Pending')}</b></span>
+                    </div>
+                </div>
+                """, unsafe_allow_html=True)
 
-elif st.session_state.get("active_link"):
-    l_info = st.session_state.active_link
-    l_cat = l_info.get("category", "link")
-    icon = "🎥" if l_cat == "youtube" else "🖼️" if l_cat == "image" else "🌐"
-    st.markdown(f"""
-    <div class="document-chip">
-        <span>{icon}</span>
-        <span><b>{l_info.get('title', 'Web Link')}</b> ({l_cat.upper()})</span>
-    </div>
-    """, unsafe_allow_html=True)
+                if doc.get("error_message"):
+                    st.error(f"Error: {doc['error_message']}")
 
-    link_c1, link_c2, link_c3, link_c4 = st.columns(4)
-    if link_c1.button("Summarize", key="act_link_sum", use_container_width=True):
-        preset_action = f"Provide a comprehensive summary and key takeaways of '{l_info.get('title')}'."
-    if link_c2.button("Exam Questions & Answers", key="act_link_qa", use_container_width=True):
-        preset_action = f"Generate 5 important questions and detailed answers based on the contents of '{l_info.get('title')}'."
-    if link_c3.button("Key Concepts", key="act_link_concepts", use_container_width=True):
-        preset_action = f"Extract the core topics, definitions, and concepts from '{l_info.get('title')}'."
-    if link_c4.button("Revision Notes", key="act_link_notes", use_container_width=True):
-        preset_action = f"Create concise study and revision notes based on '{l_info.get('title')}'."
+                # Action row for this document
+                b_c1, b_c2, b_c3, b_c4 = st.columns([1.5, 1.2, 1.2, 1.2])
+                with b_c1:
+                    is_active = (st.session_state.active_doc_id == d_id)
+                    btn_label = "🎯 Target in Chat" if not is_active else "⭐ Active in Chat"
+                    if st.button(btn_label, key=f"target_{d_id}", use_container_width=True, disabled=is_active):
+                        st.session_state.active_doc_id = d_id
+                        st.session_state.active_file = {
+                            "path": doc.get("storage_path"),
+                            "name": doc.get("filename"),
+                            "type": doc.get("file_type"),
+                            "size_mb": size_mb
+                        }
+                        st.rerun()
+                with b_c2:
+                    if st.button("🔄 Reprocess", key=f"reproc_{d_id}", use_container_width=True):
+                        with st.spinner(f"Reprocessing '{doc['filename']}'..."):
+                            st.session_state.assistant.rag_engine.reprocess_document(
+                                d_id, gemini_service=st.session_state.assistant.gemini
+                            )
+                            st.rerun()
+                with b_c3:
+                    if status == "Failed":
+                        if st.button("🔁 Retry", key=f"retry_{d_id}", use_container_width=True):
+                            with st.spinner(f"Retrying '{doc['filename']}'..."):
+                                st.session_state.assistant.rag_engine.reprocess_document(
+                                    d_id, gemini_service=st.session_state.assistant.gemini
+                                )
+                                st.rerun()
+                    else:
+                        st.write("")
+                with b_c4:
+                    if st.button("🗑️ Delete", key=f"del_{d_id}", use_container_width=True):
+                        st.session_state.assistant.rag_engine.delete_document(d_id)
+                        if st.session_state.active_doc_id == d_id:
+                            st.session_state.active_doc_id = None
+                            st.session_state.active_file = None
+                        st.rerun()
 
-# ---------------------------------------------------------------------------
-# Chat Feed
-# ---------------------------------------------------------------------------
-asst_avatar = ROBOT_AVATAR_PATH if os.path.exists(ROBOT_AVATAR_PATH) else "🤖"
+                with st.expander(f"ℹ️ View Details & Indexed Chunks ({chunks})", expanded=False):
+                    doc_chunks = get_document_chunks(d_id)
+                    st.write(f"**Doc ID:** `{d_id}`")
+                    st.write(f"**Storage Path:** `{doc.get('storage_path')}`")
+                    if doc_chunks:
+                        for idx_c, ch in enumerate(doc_chunks[:6], 1):
+                            loc = f"Page {ch.get('page_number', 1)}" if not ch.get("timestamp_str") else f"Timestamp [{ch.get('timestamp_str')}]"
+                            st.markdown(f"**Chunk #{idx_c}** ({loc}):")
+                            st.markdown(f"> *{ch.get('content')[:250]}...*")
+                    else:
+                        st.caption("No chunks currently extracted.")
 
-for msg in st.session_state.messages:
-    is_user = msg["role"] == "user"
-    avatar = "👤" if is_user else asst_avatar
+# ===========================================================================
+# TAB 3: RAG Search Explorer
+# ===========================================================================
+with tab_search:
+    st.markdown("### 🔍 Multi-Modal RAG Search & Retrieval Explorer")
+    st.caption("Perform hybrid semantic & keyword retrieval across your entire library or scoped to a specific document.")
+
+    # Ready Documents Filter
+    ready_docs_list = [d for d in list_documents() if d.get("processing_status") == "Ready"]
+    doc_options = ["All Documents (Global Library Search)"] + [f"{d['filename']} (ID: {d['doc_id']})" for d in ready_docs_list]
     
-    with st.chat_message(msg["role"], avatar=avatar):
-        st.markdown(msg["content"])
-        
-        # Subtle, professional citation (no loud debug badges)
-        if not is_user and msg.get("route") == "MULTIMODAL_RAG":
-            st.markdown("""
-            <div class="source-footnote">
-                <span>📄</span> Referenced from active document
-            </div>
-            """, unsafe_allow_html=True)
-        elif not is_user and msg.get("route") == "LINK_ANALYSIS":
-            st.markdown("""
-            <div class="source-footnote">
-                <span>🔗</span> Referenced from online link
-            </div>
-            """, unsafe_allow_html=True)
+    col_scope, _ = st.columns([2.5, 1])
+    with col_scope:
+        selected_scope = st.selectbox("Search Target Scope:", doc_options, key="rag_search_scope")
+    
+    target_doc_id = None
+    if selected_scope != "All Documents (Global Library Search)":
+        target_doc_id = selected_scope.split("ID: ")[-1].rstrip(")")
+
+    # Bigger, Executive Search Input
+    col_s_inp, col_s_btn = st.columns([4, 1.2], vertical_alignment="bottom")
+    with col_s_inp:
+        search_query_val = st.text_input(
+            "Search Query",
+            placeholder="🔍 Ask a question or search for concepts, tables, topics, transcripts...",
+            key="rag_explorer_query",
+            label_visibility="collapsed"
+        )
+    with col_s_btn:
+        do_search = st.button("🔍 Search", type="primary", use_container_width=True, key="rag_explorer_btn")
+
+    if (do_search or search_query_val) and search_query_val.strip():
+        with st.spinner("Searching vector index & synthesizing grounded answer..."):
+            rag_output = st.session_state.assistant.rag_engine.answer_rag_query(
+                query=search_query_val.strip(),
+                doc_id=target_doc_id,
+                gemini_service=st.session_state.assistant.gemini
+            )
+            raw_matches = st.session_state.assistant.rag_engine.search(
+                query=search_query_val.strip(),
+                doc_id=target_doc_id,
+                top_k=5
+            )
+
+        st.markdown("#### 💡 Grounded AI Answer")
+        st.markdown(rag_output.get("answer", "No response generated."))
+
+        st.write("")
+        st.markdown("#### 📚 Retrieved Chunks & Exact Locations")
+        if raw_matches:
+            for idx_m, m in enumerate(raw_matches, 1):
+                loc = f"Page {m.get('page_number', 1)}" if not m.get("timestamp_str") else f"Timestamp [{m.get('timestamp_str')}]"
+                score_pct = int(max(0, min(100, (m.get('score', 0) + 1.0) / 2.0 * 100))) if m.get("score") is not None else 80
+                with st.expander(f"Reference #{idx_m}: {m.get('filename')} ({loc}) — {score_pct}% Match", expanded=(idx_m==1)):
+                    st.write(f"**Document:** `{m.get('filename')}` | **Type:** `{m.get('file_type')}` | **Location:** `{loc}`")
+                    st.markdown(f"> {m.get('content')}")
+        else:
+            st.info("No matching chunks retrieved for this query.")
 
 # ---------------------------------------------------------------------------
 # Integrated Bottom Chat Input (With Built-in Mic on Left Side)
@@ -1006,7 +1384,8 @@ if user_query:
         "active_dataframe": st.session_state.active_df,
         "route": None,
         "response": None,
-        "mode": "auto"
+        "mode": "auto",
+        "active_doc_id": st.session_state.get("active_doc_id")
     }
 
     # 3. Execution

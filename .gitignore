@@ -24,3 +24,10 @@ Thumbs.db
 # Temp uploads
 tmp/
 *.tmp
+
+# Vector store and persistent uploads
+core/chroma_db/
+storage/documents/*
+!storage/documents/.gitkeep
+storage/thumbnails/*
+!storage/thumbnails/.gitkeep
