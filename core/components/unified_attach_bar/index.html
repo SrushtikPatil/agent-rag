@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Unified Attachment Bar</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
+    body {
+      background: transparent;
+      padding: 3px 2px;
+      overflow: hidden;
+    }
+    .unified-container {
+      width: 100%;
+      position: relative;
+    }
+    .unified-bar {
+      display: flex;
+      align-items: center;
+      background: #f8fafc;
+      border: 1.5px solid #bae6fd;
+      border-radius: 12px;
+      padding: 3px 6px;
+      gap: 6px;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+      height: 44px;
+    }
+    .unified-bar:hover, .unified-bar:focus-within {
+      background: #ffffff;
+      border-color: #0284c7;
+      box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.16);
+    }
+    .unified-bar.dragover {
+      background: #e0f2fe;
+      border-color: #0284c7;
+      border-style: dashed;
+      transform: scale(1.01);
+    }
+
+    /* Paperclip (Browse) Button */
+    .btn-icon {
+      background: transparent;
+      border: none;
+      outline: none;
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      color: #0284c7;
+      transition: all 0.15s ease;
+      flex-shrink: 0;
+    }
+    .btn-icon:hover {
+      background: #e0f2fe;
+      color: #0369a1;
+      transform: scale(1.08);
+    }
+    .btn-icon svg {
+      width: 18px;
+      height: 18px;
+    }
+
+    /* Main Text / URL Input */
+    .unified-input {
+      flex: 1;
+      min-width: 0;
+      border: none;
+      outline: none;
+      background: transparent;
+      font-size: 0.82rem;
+      color: #0f172a;
+      padding: 4px 2px;
+    }
+    .unified-input::placeholder {
+      color: #94a3b8;
+      font-size: 0.78rem;
+    }
+
+    /* Right Action Button (Attach / Send) */
+    .btn-action {
+      background: #0284c7;
+      border: none;
+      outline: none;
+      width: 30px;
+      height: 30px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      color: #ffffff;
+      transition: all 0.15s ease;
+      flex-shrink: 0;
+    }
+    .btn-action:hover {
+      background: #0369a1;
+      transform: scale(1.08);
+    }
+    .btn-action svg {
+      width: 15px;
+      height: 15px;
+    }
+
+    /* Processing overlay */
+    .status-text {
+      position: absolute;
+      left: 42px;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: #0284c7;
+      display: none;
+      pointer-events: none;
+      background: #ffffff;
+      padding: 0 4px;
+    }
+
+    #fileInput {
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="unified-container">
+    <input type="file" id="fileInput" accept=".pdf,.xlsx,.csv,.png,.jpg,.jpeg,.webp,.bmp,.gif,.svg,.jfif,.tiff,.mp3,.wav,.mp4,.mov,.txt,.docx">
+    
+    <div class="unified-bar" id="unifiedBar" title="Paste any link, press Ctrl+V to paste an image, or click 📎 to browse files">
+      <!-- Left: Browse File Button -->
+      <button class="btn-icon" id="browseBtn" type="button" title="Upload document, image, or media">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48"></path>
+        </svg>
+      </button>
+
+      <!-- Center: Text / Link / Paste Input -->
+      <input type="text" class="unified-input" id="unifiedInput" placeholder="Paste link, Ctrl+V image, or drop file..." autocomplete="off">
+      <div class="status-text" id="statusText">Attaching...</div>
+
+      <!-- Right: Attach Button -->
+      <button class="btn-action" id="attachBtn" type="button" title="Attach link or image">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="12" y1="19" x2="12" y2="5"></line>
+          <polyline points="5 12 12 5 19 12"></polyline>
+        </svg>
+      </button>
+    </div>
+  </div>
+
+  <script>
+    function sendToStreamlit(type, data) {
+      window.parent.postMessage(Object.assign({
+        isStreamlitMessage: true,
+        type: type
+      }, data), "*");
+    }
+
+    function notifyHeight() {
+      sendToStreamlit("streamlit:setFrameHeight", {
+        height: document.body.scrollHeight + 6
+      });
+    }
+
+    function notifyValue(val) {
+      sendToStreamlit("streamlit:setComponentValue", {
+        value: val
+      });
+    }
+
+    const unifiedBar = document.getElementById("unifiedBar");
+    const unifiedInput = document.getElementById("unifiedInput");
+    const browseBtn = document.getElementById("browseBtn");
+    const attachBtn = document.getElementById("attachBtn");
+    const fileInput = document.getElementById("fileInput");
+    const statusText = document.getElementById("statusText");
+
+    function setStatus(msg) {
+      statusText.innerText = msg;
+      statusText.style.display = "block";
+      unifiedInput.style.opacity = "0.2";
+    }
+
+    function clearStatus() {
+      statusText.style.display = "none";
+      unifiedInput.style.opacity = "1";
+    }
+
+    // 1. File Upload via Browse Button (📎)
+    browseBtn.addEventListener("click", function(e) {
+      e.stopPropagation();
+      fileInput.click();
+    });
+
+    fileInput.addEventListener("change", function(e) {
+      if (fileInput.files && fileInput.files.length > 0) {
+        const file = fileInput.files[0];
+        setStatus("Uploading " + file.name + "...");
+        const reader = new FileReader();
+        reader.onload = function(evt) {
+          notifyValue({
+            type: "file",
+            data_url: evt.target.result,
+            name: file.name,
+            size: file.size,
+            file_type: file.type
+          });
+        };
+        reader.readAsDataURL(file);
+      }
+    });
+
+    // 2. Clipboard Paste Handler (Ctrl + V for images)
+    function handlePaste(e) {
+      const clipboardData = e.clipboardData || window.clipboardData;
+      if (!clipboardData) return;
+
+      const items = clipboardData.items;
+      if (items) {
+        for (let i = 0; i < items.length; i++) {
+          if (items[i].type.indexOf("image") !== -1) {
+            const blob = items[i].getAsFile();
+            if (blob) {
+              e.preventDefault();
+              setStatus("Attaching clipboard image...");
+              const reader = new FileReader();
+              reader.onload = function(evt) {
+                notifyValue({
+                  type: "image",
+                  data_url: evt.target.result,
+                  name: blob.name || ("clipboard_image_" + Date.now() + ".png"),
+                  size: blob.size,
+                  file_type: blob.type
+                });
+              };
+              reader.readAsDataURL(blob);
+              return;
+            }
+          }
+        }
+      }
+
+      // If text paste is a direct base64 image or URL, auto-attach on paste
+      const pastedText = clipboardData.getData("text");
+      if (pastedText && pastedText.startsWith("data:image/")) {
+        e.preventDefault();
+        setStatus("Attaching data image...");
+        notifyValue({
+          type: "link",
+          url: pastedText.trim()
+        });
+      }
+    }
+
+    unifiedInput.addEventListener("paste", handlePaste);
+    window.addEventListener("paste", handlePaste);
+
+    // 3. Link Submit Handler (Enter key or Attach button)
+    function submitLink() {
+      const val = unifiedInput.value.trim();
+      if (!val) {
+        // If empty and user clicked attach, trigger file browse
+        fileInput.click();
+        return;
+      }
+      setStatus("Attaching link...");
+      notifyValue({
+        type: "link",
+        url: val
+      });
+      unifiedInput.value = "";
+    }
+
+    attachBtn.addEventListener("click", submitLink);
+    unifiedInput.addEventListener("keydown", function(e) {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        submitLink();
+      }
+    });
+
+    // 4. Drag & Drop Support
+    unifiedBar.addEventListener("dragover", function(e) {
+      e.preventDefault();
+      unifiedBar.classList.add("dragover");
+    });
+    unifiedBar.addEventListener("dragleave", function(e) {
+      e.preventDefault();
+      unifiedBar.classList.remove("dragover");
+    });
+    unifiedBar.addEventListener("drop", function(e) {
+      e.preventDefault();
+      unifiedBar.classList.remove("dragover");
+      if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+        const file = e.dataTransfer.files[0];
+        setStatus("Uploading " + file.name + "...");
+        const reader = new FileReader();
+        reader.onload = function(evt) {
+          notifyValue({
+            type: "file",
+            data_url: evt.target.result,
+            name: file.name,
+            size: file.size,
+            file_type: file.type
+          });
+        };
+        reader.readAsDataURL(file);
+      }
+    });
+
+    // Streamlit Component Ready Handshake
+    window.addEventListener("message", function(event) {
+      if (event.data && event.data.type === "streamlit:render") {
+        notifyHeight();
+      }
+    });
+
+    sendToStreamlit("streamlit:componentReady", { apiVersion: 1 });
+    window.addEventListener("load", notifyHeight);
+    setTimeout(notifyHeight, 150);
+  </script>
+</body>
+</html>
