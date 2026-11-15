@@ -340,3 +340,58 @@ def search_chunks_lexical(query: str, doc_id: Optional[str] = None, limit: int =
     except Exception:
         conn.close()
         return []
+
+def get_system_stats() -> Dict[str, Any]:
+    """Retrieves real-time system and repository statistics directly from SQLite and ChromaDB."""
+    conn = get_connection()
+    cursor = conn.cursor()
+    
+    cursor.execute("SELECT COUNT(*) FROM documents")
+    total_docs = cursor.fetchone()[0]
+    
+    cursor.execute("SELECT COUNT(*) FROM documents WHERE processing_status = 'Ready'")
+    ready_docs = cursor.fetchone()[0]
+    
+    cursor.execute("SELECT COUNT(*) FROM documents WHERE processing_status NOT IN ('Ready', 'Failed')")
+    proc_docs = cursor.fetchone()[0]
+    
+    cursor.execute("SELECT COUNT(*) FROM documents WHERE processing_status = 'Failed'")
+    failed_docs = cursor.fetchone()[0]
+    
+    cursor.execute("SELECT COUNT(*) FROM document_chunks")
+    total_chunks = cursor.fetchone()[0]
+    
+    cursor.execute("SELECT COUNT(DISTINCT file_type) FROM documents")
+    source_types_count = cursor.fetchone()[0]
+    
+    cursor.execute("SELECT COUNT(*) FROM chat_logs WHERE role = 'user'")
+    total_queries = cursor.fetchone()[0]
+    
+    cursor.execute("SELECT COUNT(*) FROM chat_logs WHERE route = 'MULTIMODAL_RAG'")
+    rag_queries = cursor.fetchone()[0]
+    
+    conn.close()
+    return {
+        "total_documents": total_docs,
+        "ready_documents": ready_docs,
+        "processing_documents": proc_docs,
+        "failed_documents": failed_docs,
+        "total_chunks": total_chunks,
+        "source_types_count": source_types_count,
+        "total_queries": total_queries,
+        "rag_queries": rag_queries
+    }
+
+def get_recent_chat_queries(user_id: str = "usr_default", limit: int = 8) -> List[str]:
+    """Retrieves recent unique user queries for the sidebar chat history."""
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT DISTINCT content FROM chat_logs 
+        WHERE user_id = ? AND role = 'user' 
+        ORDER BY id DESC LIMIT ?
+    """, (user_id, limit))
+    rows = cursor.fetchall()
+    conn.close()
+    return [r[0] for r in rows if r[0]]
+
