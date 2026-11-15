@@ -184,38 +184,48 @@ st.markdown(f"""
     /* Container constraints */
     div[data-testid="stMainBlockContainer"],
     .block-container:not([data-testid="stBottomBlockContainer"]) {{
-        padding-top: 1.5rem !important;
-        padding-bottom: 6rem !important;
-        max-width: 980px !important;
+        padding-top: 3.8rem !important;
+        padding-bottom: 7rem !important;
+        max-width: 1040px !important;
     }}
 
-    /* Bottom Chat Container */
-    div[data-testid="stBottom"] {{
+    /* Bottom Chat Container - Fully transparent with zero white boxes */
+    div[data-testid="stBottom"],
+    div[data-testid="stBottom"] > div,
+    div[data-testid="stBottomBlockContainer"],
+    footer,
+    footer[data-testid="stFooter"],
+    .stChatFloatingInputContainer {{
         background: transparent !important;
+        background-color: transparent !important;
+        border: none !important;
+        box-shadow: none !important;
         z-index: 90 !important;
     }}
     div[data-testid="stBottomBlockContainer"] {{
         max-width: 980px !important;
         padding-bottom: 1.5rem !important;
+        background: transparent !important;
     }}
 
     /* Animated 3D Nebula Orb */
     .nebula-orb-container {{
         text-align: center;
-        padding: 24px 0 16px 0;
+        padding: 12px 0 16px 0;
+        margin-top: 10px;
     }}
     .nebula-orb {{
-        width: 76px;
-        height: 76px;
+        width: 80px;
+        height: 80px;
         border-radius: 50%;
         background: radial-gradient(circle at 35% 35%, #f472b6 0%, #a855f7 35%, #6366f1 70%, #0b0d17 100%);
-        box-shadow: 0 0 45px rgba(168, 85, 247, 0.6), inset 0 0 16px rgba(255, 255, 255, 0.4);
+        box-shadow: 0 0 50px rgba(168, 85, 247, 0.65), inset 0 0 18px rgba(255, 255, 255, 0.45);
         margin: 0 auto 16px auto;
         animation: orbPulse 4s ease-in-out infinite alternate;
     }}
     @keyframes orbPulse {{
         0% {{ transform: translateY(0px) scale(1); filter: drop-shadow(0 0 25px rgba(168, 85, 247, 0.5)); }}
-        100% {{ transform: translateY(-6px) scale(1.04); filter: drop-shadow(0 0 40px rgba(124, 58, 237, 0.8)); }}
+        100% {{ transform: translateY(-6px) scale(1.04); filter: drop-shadow(0 0 45px rgba(124, 58, 237, 0.85)); }}
     }}
 
     .hero-title-nebula {{
@@ -503,6 +513,74 @@ st.markdown(f"""
     ::-webkit-scrollbar-thumb:hover {{
         background: rgba(168, 85, 247, 0.4);
     }}
+
+    /* Commercial Dark Glass Buttons */
+    div.stButton > button {{
+        background: rgba(255, 255, 255, 0.05) !important;
+        background-color: rgba(255, 255, 255, 0.05) !important;
+        border: 1px solid rgba(255, 255, 255, 0.1) !important;
+        color: #f1f5f9 !important;
+        border-radius: 12px !important;
+        font-weight: 600 !important;
+        font-size: 0.88rem !important;
+        padding: 8px 16px !important;
+        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+        box-shadow: none !important;
+        backdrop-filter: blur(8px) !important;
+    }}
+    div.stButton > button:hover {{
+        background: rgba(168, 85, 247, 0.18) !important;
+        background-color: rgba(168, 85, 247, 0.18) !important;
+        border-color: rgba(168, 85, 247, 0.5) !important;
+        color: #ffffff !important;
+        transform: translateY(-1px) !important;
+        box-shadow: 0 4px 18px rgba(168, 85, 247, 0.25) !important;
+    }}
+    div.stButton > button:active {{
+        transform: translateY(0px) scale(0.98) !important;
+    }}
+
+    /* Primary Gradient Buttons */
+    div.stButton > button[kind="primary"],
+    div.stButton > button[data-testid="baseButton-primary"] {{
+        background: linear-gradient(135deg, #7c3aed 0%, #4f46e5 100%) !important;
+        background-color: #7c3aed !important;
+        border: 1px solid rgba(168, 85, 247, 0.55) !important;
+        color: #ffffff !important;
+        border-radius: 20px !important;
+        font-weight: 700 !important;
+        box-shadow: 0 4px 18px rgba(124, 58, 237, 0.4) !important;
+    }}
+    div.stButton > button[kind="primary"]:hover,
+    div.stButton > button[data-testid="baseButton-primary"]:hover {{
+        background: linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%) !important;
+        border-color: rgba(192, 132, 252, 0.8) !important;
+        transform: translateY(-1px) scale(1.02) !important;
+        box-shadow: 0 6px 24px rgba(124, 58, 237, 0.6) !important;
+    }}
+
+    /* Inputs, Selects, and Expanders */
+    div[data-baseweb="input"],
+    div[data-baseweb="base-input"],
+    div[data-baseweb="select"] > div {{
+        background: rgba(19, 22, 38, 0.8) !important;
+        background-color: rgba(19, 22, 38, 0.8) !important;
+        border: 1px solid rgba(255, 255, 255, 0.1) !important;
+        color: #f8fafc !important;
+        border-radius: 12px !important;
+    }}
+    div[data-baseweb="input"] input,
+    div[data-baseweb="base-input"] textarea {{
+        color: #f8fafc !important;
+    }}
+    div[data-testid="stExpander"] {{
+        background: rgba(19, 22, 38, 0.6) !important;
+        border: 1px solid rgba(255, 255, 255, 0.08) !important;
+        border-radius: 14px !important;
+    }}
+    div[data-testid="stExpander"] details summary {{
+        color: #cbd5e1 !important;
+    }}
 </style>
 """, unsafe_allow_html=True)
 
@@ -536,27 +614,28 @@ with st.sidebar:
 
     # 3. Main Navigation Views
     st.caption("PLATFORM")
+    v = st.session_state.active_view
     nav_col1, nav_col2 = st.columns(2)
     with nav_col1:
-        if st.button("🏠 Overview", use_container_width=True, key="nav_dash_btn"):
+        if st.button("🏠 Overview", use_container_width=True, key="nav_dash_btn", type="primary" if v == "dashboard" else "secondary"):
             st.session_state.active_view = "dashboard"
             st.rerun()
     with nav_col2:
-        if st.button("💬 Co-Pilot", use_container_width=True, key="nav_chat_btn"):
+        if st.button("💬 Co-Pilot", use_container_width=True, key="nav_chat_btn", type="primary" if v == "chat" else "secondary"):
             st.session_state.active_view = "chat"
             st.rerun()
 
     nav_col3, nav_col4 = st.columns(2)
     with nav_col3:
-        if st.button("📑 Documents", use_container_width=True, key="nav_docs_btn"):
+        if st.button("📑 Documents", use_container_width=True, key="nav_docs_btn", type="primary" if v == "documents" else "secondary"):
             st.session_state.active_view = "documents"
             st.rerun()
     with nav_col4:
-        if st.button("🔍 RAG Search", use_container_width=True, key="nav_search_btn"):
+        if st.button("🔍 RAG Search", use_container_width=True, key="nav_search_btn", type="primary" if v == "search" else "secondary"):
             st.session_state.active_view = "search"
             st.rerun()
 
-    if st.button("📊 Analytics & Insights", use_container_width=True, key="nav_analytics_btn"):
+    if st.button("📊 Analytics & Insights", use_container_width=True, key="nav_analytics_btn", type="primary" if v == "analytics" else "secondary"):
         st.session_state.active_view = "analytics"
         st.rerun()
 
