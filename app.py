@@ -1,23 +1,22 @@
 """
-Agent RAG - Commercial Multimodal Cognitive Co-Pilot & Document Intelligence Platform
-Architecture: ChatGPT (conversational) + Notion (document management) + Linear (navigation & layout) + Modern AI SaaS.
+Personal Agentic Multi-Modal Assistant
+Executive ChatGPT, Claude & Gemini Professional Interface
 """
 
+import streamlit as st
 import os
 import tempfile
 import importlib
-import json
+import pandas as pd
 import base64
 from datetime import datetime
 from dotenv import load_dotenv
-import pandas as pd
-import streamlit as st
 
-# Environment setup
+# Path to .env for permanent storage
 ENV_FILE = os.path.join(os.path.dirname(__file__), ".env")
 load_dotenv(ENV_FILE)
 
-# Assets & Robot Avatar Setup
+# Assets & Cute 3D Robot Avatar Setup
 ASSETS_DIR = os.path.join(os.path.dirname(__file__), "assets")
 ROBOT_AVATAR_PATH = os.path.join(ASSETS_DIR, "robot_avatar.png")
 robot_b64 = ""
@@ -42,17 +41,15 @@ from database.models import (
     list_documents,
     get_document,
     delete_document as db_delete_document,
-    get_document_chunks,
-    get_system_stats,
-    get_recent_chat_queries
+    get_document_chunks
 )
 from core.proactive_engine import get_proactive_briefing
 from core.agentic_router import AgenticAssistant, AgentState
 
-# Page Configuration - Commercial AI SaaS
+# Page Configuration - Executive Minimalist Look with Cute Robot Icon
 st.set_page_config(
-    page_title="Agent RAG | Cognitive Co-Pilot",
-    page_icon="🌌",
+    page_title="Agent Rag",
+    page_icon=ROBOT_AVATAR_PATH if os.path.exists(ROBOT_AVATAR_PATH) else "🤖",
     layout="wide",
     initial_sidebar_state="expanded"
 )
@@ -61,16 +58,667 @@ st.set_page_config(
 init_db()
 
 # ---------------------------------------------------------------------------
-# Session State Initialization
+# Executive Professional Styling (Claude / ChatGPT / Gemini Studio)
+# ---------------------------------------------------------------------------
+st.markdown("""
+<style>
+    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+    
+    html, body, [class*="css"] {
+        font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        color: #0f172a;
+    }
+
+    /* Professional Light Blue Background */
+    .stApp {
+        background: linear-gradient(180deg, #f0f7ff 0%, #f8fafc 40%, #ffffff 100%) !important;
+        background-attachment: fixed !important;
+    }
+    
+    /* Header & Toolbar: Transparent and active so sidebar button works */
+    header[data-testid="stHeader"] {
+        background: transparent !important;
+        z-index: 99999 !important;
+    }
+    div[data-testid="stToolbar"] {
+        background: transparent !important;
+        display: flex !important;
+        visibility: visible !important;
+    }
+    
+    /* Hide top colored decoration bar, Deploy button, and 3-dots menu */
+    div[data-testid="stDecoration"],
+    .stAppDeployButton,
+    #MainMenu {
+        display: none !important;
+    }
+
+    /* Streamlit Modern Sidebar Expand Button (Appears when sidebar is collapsed) */
+    button[data-testid="stExpandSidebarButton"] {
+        display: inline-flex !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+        background: #ffffff !important;
+        border: 1.5px solid #0284c7 !important;
+        border-radius: 10px !important;
+        color: #0284c7 !important;
+        box-shadow: 0 3px 12px rgba(2, 132, 199, 0.28) !important;
+        margin-top: 8px !important;
+        margin-left: 12px !important;
+        padding: 6px 10px !important;
+        cursor: pointer !important;
+        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    }
+    button[data-testid="stExpandSidebarButton"]:hover {
+        background: #f0f9ff !important;
+        border-color: #0369a1 !important;
+        box-shadow: 0 4px 16px rgba(2, 132, 199, 0.45) !important;
+        transform: scale(1.1) !important;
+    }
+    button[data-testid="stExpandSidebarButton"] span,
+    button[data-testid="stExpandSidebarButton"] svg {
+        color: #0284c7 !important;
+        fill: #0284c7 !important;
+        font-size: 1.3rem !important;
+    }
+
+    /* Sidebar Collapse Button (Inside the sidebar header when open) */
+    button[data-testid="stSidebarCollapseButton"] {
+        color: #0369a1 !important;
+        border-radius: 8px !important;
+    }
+    button[data-testid="stSidebarCollapseButton"]:hover {
+        background: #e0f2fe !important;
+        color: #0284c7 !important;
+    }
+    
+    /* Main container clean spacing */
+    div[data-testid="stMainBlockContainer"],
+    .block-container:not([data-testid="stBottomBlockContainer"]) {
+        padding-top: 2rem !important;
+        padding-bottom: 5.5rem !important;
+        max-width: 900px !important;
+    }
+
+    /* Fixed Bottom Chat Container - Clean Alignment that never overlaps with Sidebar */
+    div[data-testid="stBottom"] {
+        background: transparent !important;
+        z-index: 80 !important;
+    }
+    div[data-testid="stBottomBlockContainer"] {
+        max-width: 900px !important;
+        padding-top: 0.5rem !important;
+        padding-bottom: 1.4rem !important;
+    }
+
+    /* Executive Hero Greeting */
+    .hero-wrapper {
+        padding: 36px 0 20px 0;
+        text-align: left;
+    }
+    .hero-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 5px 14px;
+        background: #e0f2fe;
+        border: 1px solid #bae6fd;
+        border-radius: 20px;
+        font-size: 0.74rem;
+        font-weight: 700;
+        color: #0369a1;
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+        margin-bottom: 12px;
+        box-shadow: 0 1px 3px rgba(2, 132, 199, 0.08);
+    }
+    .hero-title {
+        font-size: 2.3rem;
+        font-weight: 700;
+        letter-spacing: -0.035em;
+        background: linear-gradient(135deg, #0284c7 0%, #0369a1 40%, #0f172a 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        margin-bottom: 8px;
+    }
+    .hero-subtitle {
+        font-size: 1.05rem;
+        color: #475569;
+        font-weight: 400;
+        margin-bottom: 22px;
+        line-height: 1.5;
+    }
+
+    /* Twin Notification Pills - Matching Height & Light Blue / Amber Accents */
+    .festival-pill, .birthday-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 6px 16px;
+        border-radius: 20px;
+        font-size: 0.84rem;
+        font-weight: 500;
+        height: 38px;
+        min-height: 38px;
+        max-height: 38px;
+        box-sizing: border-box;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        margin: 0;
+        width: 100%;
+    }
+    .festival-pill {
+        background: #fffbeb;
+        border: 1px solid #fde68a;
+        color: #92400e;
+        box-shadow: 0 1px 3px rgba(146, 64, 14, 0.05);
+    }
+    .birthday-pill {
+        background: #eff6ff;
+        border: 1px solid #bfdbfe;
+        color: #1d4ed8;
+        box-shadow: 0 1px 3px rgba(29, 78, 216, 0.06);
+    }
+
+    /* Executive Document Chip */
+    .document-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        padding: 8px 18px;
+        background: #f0f9ff;
+        border: 1px solid #7dd3fc;
+        border-radius: 20px;
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: #0369a1;
+        box-shadow: 0 1px 4px rgba(2, 132, 199, 0.08);
+        margin-bottom: 14px;
+    }
+
+    /* Refined Light-Blue Action Pill Buttons */
+    div[data-testid="stHorizontalBlock"] .stButton > button {
+        border-radius: 20px !important;
+        font-size: 0.84rem !important;
+        font-weight: 600 !important;
+        padding: 7px 16px !important;
+        border: 1px solid #bae6fd !important;
+        background: #ffffff !important;
+        color: #0369a1 !important;
+        box-shadow: 0 1px 3px rgba(2, 132, 199, 0.06) !important;
+        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    }
+    div[data-testid="stHorizontalBlock"] .stButton > button:hover {
+        border-color: #0284c7 !important;
+        background: #f0f9ff !important;
+        color: #0c4a6e !important;
+        box-shadow: 0 3px 8px rgba(2, 132, 199, 0.16) !important;
+        transform: translateY(-1px) !important;
+    }
+
+    /* Chat Messages - Crisp Light Blue Card Styling */
+    div[data-testid="stChatMessage"] {
+        background-color: #ffffff !important;
+        border: 1px solid #e0f2fe !important;
+        border-radius: 16px !important;
+        padding: 16px 20px !important;
+        margin-bottom: 14px !important;
+        box-shadow: 0 2px 8px rgba(2, 132, 199, 0.04) !important;
+        transition: border-color 0.2s ease !important;
+    }
+    div[data-testid="stChatMessage"]:hover {
+        border-color: #bae6fd !important;
+    }
+    
+    /* Cute 3D AI Robot Avatar Badge */
+    div[data-testid="stChatMessageAvatarCustom"],
+    div[data-testid="stChatMessageAvatarAssistant"] {
+        background: transparent !important;
+        border: none !important;
+        box-shadow: none !important;
+        width: 38px !important;
+        height: 38px !important;
+        min-width: 38px !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+    }
+    div[data-testid="stChatMessageAvatarCustom"] img,
+    div[data-testid="stChatMessageAvatarAssistant"] img {
+        width: 38px !important;
+        height: 38px !important;
+        border-radius: 50% !important;
+        box-shadow: 0 3px 10px rgba(2, 132, 199, 0.22) !important;
+        border: 2px solid #7dd3fc !important;
+        object-fit: cover !important;
+    }
+    
+    /* Subtle Citation / Source Footnote */
+    .source-footnote {
+        font-size: 0.76rem;
+        color: #0284c7;
+        margin-top: 10px;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-weight: 500;
+    }
+
+    /* Sidebar Light Blue Atmosphere */
+    section[data-testid="stSidebar"] {
+        background: linear-gradient(180deg, #f0f9ff 0%, #f8fafc 100%) !important;
+        border-right: 1px solid #bae6fd !important;
+        z-index: 100 !important;
+    }
+    div[data-testid="stSidebarContent"] {
+        position: relative !important;
+        height: 100vh !important;
+        max-height: 100vh !important;
+        overflow-y: auto !important;
+        overflow-x: hidden !important;
+        display: block !important;
+    }
+    div[data-testid="stSidebarUserContent"] {
+        padding-bottom: 230px !important; /* ensures scrolling content never touches bottom drawers */
+    }
+
+    /* FIRMLY DOCK Milestones & Settings to the VERY BOTTOM / END LINE OF THE SIDEBAR */
+    div[data-testid="stElementContainer"]:has(.st-key-sidebar_bottom_box),
+    .st-key-sidebar_bottom_box {
+        position: absolute !important;
+        bottom: 14px !important;
+        left: 14px !important;
+        right: 14px !important;
+        width: calc(100% - 28px) !important;
+        margin: 0 !important;
+        z-index: 50 !important;
+    }
+    .st-key-sidebar_bottom_box hr {
+        margin: 8px 0 10px 0 !important;
+        border-color: #bae6fd !important;
+    }
+    .st-key-sidebar_bottom_box div[data-testid="stExpander"] {
+        margin-bottom: 6px !important;
+    }
+
+    section[data-testid="stSidebar"] h4, section[data-testid="stSidebar"] h6 {
+        color: #0369a1 !important;
+        font-weight: 700 !important;
+    }
+    
+    /* Sidebar Primary New Chat Button */
+    div[data-testid="stSidebar"] .stButton > button {
+        background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%) !important;
+        color: #ffffff !important;
+        border-radius: 12px !important;
+        font-weight: 600 !important;
+        border: none !important;
+        box-shadow: 0 2px 8px rgba(2, 132, 199, 0.24) !important;
+        transition: all 0.2s ease !important;
+        padding: 8px 16px !important;
+    }
+    div[data-testid="stSidebar"] .stButton > button:hover {
+        background: linear-gradient(135deg, #0369a1 0%, #075985 100%) !important;
+        box-shadow: 0 4px 14px rgba(2, 132, 199, 0.35) !important;
+        transform: translateY(-1px) !important;
+    }
+
+    /* Light Blue File Uploader */
+    div[data-testid="stFileUploader"] {
+        background: #ffffff !important;
+        border: 1.5px dashed #7dd3fc !important;
+        border-radius: 12px !important;
+        padding: 8px !important;
+        transition: all 0.2s ease !important;
+    }
+    div[data-testid="stFileUploader"]:hover {
+        border-color: #0284c7 !important;
+        background: #f0f9ff !important;
+    }
+
+    /* Light Blue Expander Containers */
+    div[data-testid="stExpander"] {
+        background: #ffffff !important;
+        border: 1px solid #e0f2fe !important;
+        border-radius: 12px !important;
+        box-shadow: 0 1px 4px rgba(2, 132, 199, 0.04) !important;
+    }
+
+    /* Chat / Search Input Bar - Bigger, Executive Clean Design */
+    div[data-testid="stChatInput"] {
+        position: relative !important;
+        border-radius: 32px !important;
+        border: 1.5px solid #bae6fd !important;
+        background: #ffffff !important;
+        min-height: 58px !important;
+        box-shadow: 0 4px 20px rgba(2, 132, 199, 0.10) !important;
+        transition: all 0.2s ease !important;
+    }
+    div[data-testid="stChatInput"]:focus-within {
+        border-color: #0284c7 !important;
+        box-shadow: 0 4px 24px rgba(2, 132, 199, 0.22) !important;
+    }
+    div[data-testid="stChatInput"] textarea {
+        min-height: 48px !important;
+        font-size: 1.05rem !important;
+        line-height: 1.5 !important;
+        padding-top: 14px !important;
+        padding-bottom: 14px !important;
+        padding-left: 54px !important;
+        padding-right: 54px !important;
+        text-decoration: none !important;
+        -webkit-text-decorations-in-effect: none !important;
+        text-decoration-line: none !important;
+        caret-color: #0284c7 !important;
+        color: #0f172a !important;
+    }
+    div[data-testid="stChatInput"] textarea::placeholder {
+        font-size: 1.02rem !important;
+        color: #94a3b8 !important;
+    }
+
+    /* Completely Remove Any Red Background, Red Borders, or Box Wrappers from Chat Input and Microphone */
+    div[data-testid="stChatInput"] [data-testid="stTooltipErrorHoverTarget"],
+    div[data-testid="stChatInput"] .stTooltipErrorHoverTarget,
+    div[data-testid="stChatInput"] div:has(button[data-testid="stChatInputMicButton"]),
+    div[data-testid="stChatInput"] div:has([data-testid="stChatInputMicButton"]) {
+        background: transparent !important;
+        background-color: transparent !important;
+        border: none !important;
+        box-shadow: none !important;
+    }
+
+    /* Executive Real Microphone Symbol in Classic Blue Color - Centered Vertically on Left */
+    div[data-testid="stChatInput"] button[data-testid="stChatInputMicButton"] {
+        position: absolute !important;
+        left: 14px !important;
+        top: 50% !important;
+        transform: translateY(-50%) !important;
+        bottom: auto !important;
+        z-index: 20 !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        background: transparent !important;
+        background-color: transparent !important;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' width='22' height='22'%3E%3Cpath d='M12 2a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z' fill='%230284c7' stroke='%230284c7' stroke-width='1.2'/%3E%3Cpath d='M19 10v1a7 7 0 0 1-14 0v-1' fill='none' stroke='%230284c7' stroke-width='2' stroke-linecap='round'/%3E%3Cline x1='12' y1='18' x2='12' y2='22' stroke='%230284c7' stroke-width='2' stroke-linecap='round'/%3E%3Cline x1='8' y1='22' x2='16' y2='22' stroke='%230284c7' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E") !important;
+        background-repeat: no-repeat !important;
+        background-position: center !important;
+        background-size: 22px 22px !important;
+        border: none !important;
+        box-shadow: none !important;
+        outline: none !important;
+        width: 36px !important;
+        height: 36px !important;
+        min-width: 36px !important;
+        min-height: 36px !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        cursor: pointer !important;
+        transition: transform 0.15s cubic-bezier(0.4, 0, 0.2, 1), background-image 0.15s ease !important;
+    }
+    div[data-testid="stChatInput"] button[data-testid="stChatInputMicButton"]:hover {
+        background-color: transparent !important;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' width='22' height='22'%3E%3Cpath d='M12 2a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z' fill='%230369a1' stroke='%230369a1' stroke-width='1.2'/%3E%3Cpath d='M19 10v1a7 7 0 0 1-14 0v-1' fill='none' stroke='%230369a1' stroke-width='2' stroke-linecap='round'/%3E%3Cline x1='12' y1='18' x2='12' y2='22' stroke='%230369a1' stroke-width='2' stroke-linecap='round'/%3E%3Cline x1='8' y1='22' x2='16' y2='22' stroke='%230369a1' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E") !important;
+        border: none !important;
+        box-shadow: none !important;
+        outline: none !important;
+        transform: translateY(-50%) scale(1.15) !important;
+    }
+    div[data-testid="stChatInput"] button[data-testid="stChatInputMicButton"]:active,
+    div[data-testid="stChatInput"] button[data-testid="stChatInputMicButton"]:focus {
+        background-color: transparent !important;
+        border: none !important;
+        box-shadow: none !important;
+        outline: none !important;
+    }
+
+    /* Completely hide any internal children/rect elements to prevent black square artifact */
+    div[data-testid="stChatInput"] button[data-testid="stChatInputMicButton"] > * {
+        display: none !important;
+        visibility: hidden !important;
+        opacity: 0 !important;
+        pointer-events: none !important;
+    }
+    div[data-testid="stChatInput"] button[data-testid="stChatInputMicButton"] svg rect {
+        display: none !important;
+        fill: none !important;
+    }
+
+    /* Submit Button (Send Arrow) - Centered Vertically on Right */
+    div[data-testid="stChatInput"] button[data-testid="stChatInputSubmitButton"] {
+        position: absolute !important;
+        right: 14px !important;
+        top: 50% !important;
+        transform: translateY(-50%) !important;
+        bottom: auto !important;
+        z-index: 20 !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        color: #0284c7 !important;
+        background: transparent !important;
+        border: none !important;
+        box-shadow: none !important;
+        outline: none !important;
+        width: 36px !important;
+        height: 36px !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        transition: transform 0.15s ease, color 0.15s ease !important;
+    }
+    div[data-testid="stChatInput"] button[data-testid="stChatInputSubmitButton"]:hover {
+        transform: translateY(-50%) scale(1.15) !important;
+        color: #0369a1 !important;
+        background: transparent !important;
+    }
+
+    /* Clean, borderless component iframes */
+    section[data-testid="stSidebar"] iframe {
+        border: none !important;
+        background: transparent !important;
+        overflow: hidden !important;
+        width: 100% !important;
+    }
+
+    /* Inline Code & Badges */
+    code {
+        color: #0369a1 !important;
+        background-color: #f0f9ff !important;
+        padding: 2px 7px !important;
+        border-radius: 6px !important;
+        border: 1px solid #e0f2fe !important;
+        font-size: 0.88em !important;
+    }
+
+    /* Executive Voice Mic Widget Styling */
+    div[data-testid="stAudioInput"] {
+        background: #ffffff !important;
+        border: 1.5px solid #bae6fd !important;
+        border-radius: 14px !important;
+        padding: 6px 12px !important;
+        box-shadow: 0 1px 4px rgba(2, 132, 199, 0.05) !important;
+        transition: all 0.2s ease !important;
+    }
+    div[data-testid="stAudioInput"]:hover {
+        border-color: #0284c7 !important;
+        box-shadow: 0 3px 12px rgba(2, 132, 199, 0.12) !important;
+    }
+    div[data-testid="stAudioInput"] button {
+        border-radius: 50% !important;
+        transition: transform 0.15s ease !important;
+    }
+    div[data-testid="stAudioInput"] button:hover {
+        transform: scale(1.08) !important;
+    }
+    .voice-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        background: #e0f2fe;
+        color: #0369a1;
+        font-size: 0.74rem;
+        font-weight: 700;
+        padding: 2px 9px;
+        border-radius: 10px;
+        border: 1px solid #bae6fd;
+        margin-bottom: 6px;
+    }
+
+
+
+    /* KPI Summary Cards & Document Management Cards */
+    .kpi-card {
+        background: #ffffff;
+        border: 1px solid #e0f2fe;
+        border-radius: 12px;
+        padding: 14px 18px;
+        text-align: center;
+        box-shadow: 0 1px 4px rgba(2, 132, 199, 0.05);
+    }
+    .kpi-value {
+        font-size: 1.8rem;
+        font-weight: 800;
+        color: #0369a1;
+        line-height: 1.1;
+    }
+    .kpi-label {
+        font-size: 0.8rem;
+        font-weight: 600;
+        color: #64748b;
+        margin-top: 4px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    .doc-item-card {
+        background: #ffffff;
+        border: 1.5px solid #e0f2fe;
+        border-radius: 14px;
+        padding: 16px 20px;
+        margin-bottom: 14px;
+        box-shadow: 0 1px 6px rgba(2, 132, 199, 0.06);
+        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .doc-item-card:hover {
+        border-color: #7dd3fc;
+        box-shadow: 0 4px 16px rgba(2, 132, 199, 0.14);
+    }
+    .status-pill-ready {
+        background: #ecfdf5;
+        color: #059669;
+        font-weight: 700;
+        font-size: 0.76rem;
+        padding: 3px 10px;
+        border-radius: 9999px;
+        border: 1px solid #a7f3d0;
+    }
+    .status-pill-progress {
+        background: #eff6ff;
+        color: #2563eb;
+        font-weight: 700;
+        font-size: 0.76rem;
+        padding: 3px 10px;
+        border-radius: 9999px;
+        border: 1px solid #bfdbfe;
+    }
+    .status-pill-failed {
+        background: #fef2f2;
+        color: #dc2626;
+        font-weight: 700;
+        font-size: 0.76rem;
+        padding: 3px 10px;
+        border-radius: 9999px;
+        border: 1px solid #fecaca;
+    }
+    .type-pill {
+        background: #f1f5f9;
+        color: #475569;
+        font-weight: 700;
+        font-size: 0.72rem;
+        padding: 2px 8px;
+        border-radius: 6px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    .active-target-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        background: #f0fdf4;
+        border: 1.5px solid #86efac;
+        color: #166534;
+        padding: 8px 16px;
+        border-radius: 12px;
+        font-size: 0.88rem;
+        font-weight: 600;
+        margin-bottom: 12px;
+    }
+
+    /* Mobile & Tablet Responsive Optimizations (Show same clean UI on mobile devices) */
+    @media (max-width: 768px) {
+        .block-container {
+            padding-top: 1.2rem !important;
+            padding-bottom: 4.5rem !important;
+            padding-left: 0.8rem !important;
+            padding-right: 0.8rem !important;
+        }
+        .hero-title {
+            font-size: 1.7rem !important;
+            line-height: 1.25 !important;
+        }
+        .hero-subtitle {
+            font-size: 0.92rem !important;
+            margin-bottom: 14px !important;
+        }
+        div[data-testid="stBottomBlockContainer"] {
+            padding-left: 0.6rem !important;
+            padding-right: 0.6rem !important;
+            padding-bottom: 0.8rem !important;
+        }
+        div[data-testid="stChatInput"] {
+            border-radius: 28px !important;
+            min-height: 54px !important;
+        }
+        button[data-testid="stExpandSidebarButton"] {
+            top: 8px !important;
+            left: 8px !important;
+            padding: 8px 12px !important;
+            font-size: 1.1rem !important;
+        }
+        div[data-testid="stChatMessage"] {
+            padding: 12px 14px !important;
+            border-radius: 12px !important;
+        }
+        .festival-pill, .birthday-pill {
+            font-size: 0.78rem !important;
+            padding: 4px 10px !important;
+        }
+    }
+</style>
+""", unsafe_allow_html=True)
+
+# ---------------------------------------------------------------------------
+# Session State Initialization & Auto-Load from .env
 # ---------------------------------------------------------------------------
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
-if "active_view" not in st.session_state:
-    st.session_state.active_view = "dashboard" # "dashboard", "chat", "documents", "search", "analytics"
+if "last_processed_audio_hash" not in st.session_state:
+    st.session_state.last_processed_audio_hash = None
 
-if "dark_mode" not in st.session_state:
-    st.session_state.dark_mode = True
+env_key = ""
+if os.path.exists(ENV_FILE):
+    with open(ENV_FILE, "r", encoding="utf-8") as f:
+        for line in f:
+            if line.startswith("GEMINI_API_KEY="):
+                env_key = line.split("=", 1)[1].strip()
+
+if "api_key" not in st.session_state or not st.session_state.api_key:
+    st.session_state.api_key = env_key or os.getenv("GEMINI_API_KEY", "")
+
+# Always fresh assistant instance with active key
+st.session_state.assistant = AgenticAssistant(api_key=st.session_state.api_key)
 
 if "active_file" not in st.session_state:
     st.session_state.active_file = None
@@ -93,19 +741,6 @@ if "file_uploader_key" not in st.session_state:
 if "dismissed_birthday_alerts" not in st.session_state:
     st.session_state.dismissed_birthday_alerts = set()
 
-env_key = ""
-if os.path.exists(ENV_FILE):
-    with open(ENV_FILE, "r", encoding="utf-8") as f:
-        for line in f:
-            if line.startswith("GEMINI_API_KEY="):
-                env_key = line.split("=", 1)[1].strip()
-
-if "api_key" not in st.session_state or not st.session_state.api_key:
-    st.session_state.api_key = env_key or os.getenv("GEMINI_API_KEY", "")
-
-# Initialize assistant with API key
-st.session_state.assistant = AgenticAssistant(api_key=st.session_state.api_key)
-
 def on_api_key_update():
     entered_key = st.session_state.api_key_input.strip()
     st.session_state.api_key = entered_key
@@ -114,1085 +749,382 @@ def on_api_key_update():
         f.write(f"GEMINI_API_KEY={entered_key}\n")
 
 # ---------------------------------------------------------------------------
-# High-End Commercial SaaS Styling (Linear + Nebula Dark Cosmic Design)
-# ---------------------------------------------------------------------------
-is_dark = st.session_state.dark_mode
-
-bg_main = (
-    "radial-gradient(circle at 50% 0%, rgba(99, 102, 241, 0.15) 0%, transparent 60%), "
-    "radial-gradient(circle at 85% 25%, rgba(168, 85, 247, 0.10) 0%, transparent 50%), "
-    "linear-gradient(180deg, #0b0d17 0%, #0e1122 45%, #080912 100%)"
-) if is_dark else (
-    "linear-gradient(180deg, #f0f7ff 0%, #f8fafc 40%, #ffffff 100%)"
-)
-
-text_primary = "#f8fafc" if is_dark else "#0f172a"
-text_secondary = "#94a3b8" if is_dark else "#475569"
-card_bg = "rgba(19, 22, 38, 0.75)" if is_dark else "#ffffff"
-card_border = "rgba(255, 255, 255, 0.08)" if is_dark else "#e0f2fe"
-card_hover_border = "rgba(168, 85, 247, 0.45)" if is_dark else "#7dd3fc"
-sidebar_bg = "#0d0f1a" if is_dark else "#f8fafc"
-
-st.markdown(f"""
-<style>
-    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
-    
-    html, body, [class*="css"] {{
-        font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-        color: {text_primary};
-    }}
-
-    .stApp {{
-        background: {bg_main} !important;
-        background-attachment: fixed !important;
-    }}
-    
-    /* Header & Toolbar: Transparent and clean */
-    header[data-testid="stHeader"] {{
-        background: transparent !important;
-        z-index: 99999 !important;
-    }}
-    div[data-testid="stToolbar"] {{
-        background: transparent !important;
-        display: flex !important;
-        visibility: visible !important;
-    }}
-    div[data-testid="stDecoration"],
-    .stAppDeployButton,
-    #MainMenu {{
-        display: none !important;
-    }}
-
-    /* Sidebar Clean Styling */
-    section[data-testid="stSidebar"] {{
-        background: {sidebar_bg} !important;
-        border-right: 1px solid {card_border} !important;
-    }}
-    section[data-testid="stSidebar"] div.block-container {{
-        padding-top: 1.2rem !important;
-        padding-bottom: 2rem !important;
-    }}
-
-    /* Expand sidebar button */
-    button[data-testid="stExpandSidebarButton"] {{
-        background: {card_bg} !important;
-        border: 1px solid {card_border} !important;
-        color: #a855f7 !important;
-        border-radius: 10px !important;
-    }}
-
-    /* Container constraints */
-    div[data-testid="stMainBlockContainer"],
-    .block-container:not([data-testid="stBottomBlockContainer"]) {{
-        padding-top: 3.8rem !important;
-        padding-bottom: 7rem !important;
-        max-width: 1040px !important;
-    }}
-
-    /* Bottom Chat Container - Fully transparent with zero white boxes */
-    div[data-testid="stBottom"],
-    div[data-testid="stBottom"] > div,
-    div[data-testid="stBottomBlockContainer"],
-    footer,
-    footer[data-testid="stFooter"],
-    .stChatFloatingInputContainer {{
-        background: transparent !important;
-        background-color: transparent !important;
-        border: none !important;
-        box-shadow: none !important;
-        z-index: 90 !important;
-    }}
-    div[data-testid="stBottomBlockContainer"] {{
-        max-width: 980px !important;
-        padding-bottom: 1.5rem !important;
-        background: transparent !important;
-    }}
-
-    /* Animated 3D Nebula Orb */
-    .nebula-orb-container {{
-        text-align: center;
-        padding: 12px 0 16px 0;
-        margin-top: 10px;
-    }}
-    .nebula-orb {{
-        width: 80px;
-        height: 80px;
-        border-radius: 50%;
-        background: radial-gradient(circle at 35% 35%, #f472b6 0%, #a855f7 35%, #6366f1 70%, #0b0d17 100%);
-        box-shadow: 0 0 50px rgba(168, 85, 247, 0.65), inset 0 0 18px rgba(255, 255, 255, 0.45);
-        margin: 0 auto 16px auto;
-        animation: orbPulse 4s ease-in-out infinite alternate;
-    }}
-    @keyframes orbPulse {{
-        0% {{ transform: translateY(0px) scale(1); filter: drop-shadow(0 0 25px rgba(168, 85, 247, 0.5)); }}
-        100% {{ transform: translateY(-6px) scale(1.04); filter: drop-shadow(0 0 45px rgba(124, 58, 237, 0.85)); }}
-    }}
-
-    .hero-title-nebula {{
-        font-size: 2.1rem;
-        font-weight: 800;
-        color: {text_primary};
-        letter-spacing: -0.5px;
-        margin-bottom: 6px;
-        text-align: center;
-    }}
-    .hero-subtitle-nebula {{
-        font-size: 1.02rem;
-        color: {text_secondary};
-        text-align: center;
-        max-width: 620px;
-        margin: 0 auto 28px auto;
-        line-height: 1.5;
-    }}
-
-    /* Commercial SaaS Cards */
-    .saas-card {{
-        background: {card_bg};
-        border: 1px solid {card_border};
-        border-radius: 16px;
-        padding: 18px 20px;
-        transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-        backdrop-filter: blur(16px);
-        margin-bottom: 12px;
-    }}
-    .saas-card:hover {{
-        border-color: {card_hover_border};
-        transform: translateY(-2px);
-        box-shadow: 0 10px 30px rgba(99, 102, 241, 0.14);
-    }}
-
-    /* Stat KPI Card */
-    .stat-box {{
-        background: {card_bg};
-        border: 1px solid {card_border};
-        border-radius: 14px;
-        padding: 16px;
-        text-align: center;
-        transition: all 0.2s ease;
-    }}
-    .stat-box:hover {{
-        border-color: {card_hover_border};
-        transform: translateY(-2px);
-    }}
-    .stat-num {{
-        font-size: 1.85rem;
-        font-weight: 800;
-        line-height: 1.1;
-        background: linear-gradient(135deg, #a855f7 0%, #6366f1 100%);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-    }}
-    .stat-label {{
-        font-size: 0.76rem;
-        font-weight: 700;
-        color: {text_secondary};
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-        margin-top: 4px;
-    }}
-
-    /* Prompt Starter Cards (Matching Uploaded Image) */
-    .prompt-box {{
-        background: {card_bg};
-        border: 1px solid {card_border};
-        border-radius: 16px;
-        padding: 18px;
-        min-height: 125px;
-        transition: all 0.25s ease;
-        cursor: pointer;
-    }}
-    .prompt-box:hover {{
-        border-color: #a855f7;
-        box-shadow: 0 8px 25px rgba(168, 85, 247, 0.15);
-        transform: translateY(-2px);
-    }}
-    .prompt-tag {{
-        display: inline-flex;
-        align-items: center;
-        gap: 6px;
-        font-size: 0.88rem;
-        font-weight: 700;
-        color: #c084fc;
-        margin-bottom: 8px;
-    }}
-    .prompt-desc {{
-        font-size: 0.82rem;
-        color: {text_secondary};
-        line-height: 1.4;
-    }}
-
-    /* Status Badges */
-    .badge-ready {{
-        display: inline-flex;
-        align-items: center;
-        gap: 5px;
-        background: rgba(16, 185, 129, 0.12);
-        color: #34d399;
-        font-size: 0.74rem;
-        font-weight: 700;
-        padding: 3px 10px;
-        border-radius: 9999px;
-        border: 1px solid rgba(16, 185, 129, 0.25);
-    }}
-    .badge-progress {{
-        display: inline-flex;
-        align-items: center;
-        gap: 5px;
-        background: rgba(99, 102, 241, 0.12);
-        color: #818cf8;
-        font-size: 0.74rem;
-        font-weight: 700;
-        padding: 3px 10px;
-        border-radius: 9999px;
-        border: 1px solid rgba(99, 102, 241, 0.25);
-    }}
-    .badge-failed {{
-        display: inline-flex;
-        align-items: center;
-        gap: 5px;
-        background: rgba(239, 68, 68, 0.12);
-        color: #f87171;
-        font-size: 0.74rem;
-        font-weight: 700;
-        padding: 3px 10px;
-        border-radius: 9999px;
-        border: 1px solid rgba(239, 68, 68, 0.25);
-    }}
-
-    /* Navigation Pill in Sidebar */
-    .nav-pill-active {{
-        background: linear-gradient(135deg, rgba(99, 102, 241, 0.25) 0%, rgba(168, 85, 247, 0.25) 100%);
-        border: 1px solid rgba(168, 85, 247, 0.4);
-        color: #ffffff !important;
-        font-weight: 700;
-        border-radius: 12px;
-        padding: 10px 14px;
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        margin-bottom: 6px;
-    }}
-    .nav-pill-inactive {{
-        background: transparent;
-        color: {text_secondary};
-        font-weight: 600;
-        border-radius: 12px;
-        padding: 10px 14px;
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        margin-bottom: 6px;
-        transition: all 0.2s ease;
-    }}
-    .nav-pill-inactive:hover {{
-        background: rgba(255, 255, 255, 0.04);
-        color: {text_primary};
-    }}
-
-    /* Sidebar New Chat Button (Purple Gradient matching Image) */
-    .new-chat-btn {{
-        background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%) !important;
-        color: #ffffff !important;
-        font-weight: 700 !important;
-        border-radius: 20px !important;
-        padding: 10px 20px !important;
-        border: none !important;
-        box-shadow: 0 4px 18px rgba(168, 85, 247, 0.35) !important;
-        transition: all 0.2s ease !important;
-    }}
-    .new-chat-btn:hover {{
-        transform: translateY(-1px) scale(1.02) !important;
-        box-shadow: 0 6px 24px rgba(168, 85, 247, 0.5) !important;
-    }}
-
-    /* Chat Input Bar - Dark Frosted Glass with Real Blue/Violet Mic */
-    div[data-testid="stChatInput"] {{
-        position: relative !important;
-        border-radius: 28px !important;
-        border: 1px solid {card_border} !important;
-        background: {card_bg} !important;
-        min-height: 58px !important;
-        box-shadow: 0 8px 30px rgba(0, 0, 0, 0.35) !important;
-        backdrop-filter: blur(20px) !important;
-        transition: all 0.2s ease !important;
-    }}
-    div[data-testid="stChatInput"]:focus-within {{
-        border-color: #a855f7 !important;
-        box-shadow: 0 8px 35px rgba(168, 85, 247, 0.25) !important;
-    }}
-    div[data-testid="stChatInput"] textarea {{
-        min-height: 48px !important;
-        font-size: 1.02rem !important;
-        line-height: 1.5 !important;
-        padding-top: 14px !important;
-        padding-bottom: 14px !important;
-        padding-left: 54px !important;
-        padding-right: 54px !important;
-        caret-color: #a855f7 !important;
-        color: {text_primary} !important;
-    }}
-    div[data-testid="stChatInput"] textarea::placeholder {{
-        color: {text_secondary} !important;
-    }}
-
-    /* Microphone Button in Chat Input */
-    div[data-testid="stChatInput"] button[data-testid="stChatInputMicButton"] {{
-        position: absolute !important;
-        left: 14px !important;
-        top: 50% !important;
-        transform: translateY(-50%) !important;
-        z-index: 20 !important;
-        background: transparent !important;
-        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' width='22' height='22'%3E%3Cpath d='M12 2a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z' fill='%23a855f7' stroke='%23a855f7' stroke-width='1.2'/%3E%3Cpath d='M19 10v1a7 7 0 0 1-14 0v-1' fill='none' stroke='%23a855f7' stroke-width='2' stroke-linecap='round'/%3E%3Cline x1='12' y1='18' x2='12' y2='22' stroke='%23a855f7' stroke-width='2' stroke-linecap='round'/%3E%3Cline x1='8' y1='22' x2='16' y2='22' stroke='%23a855f7' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E") !important;
-        background-repeat: no-repeat !important;
-        background-position: center !important;
-        background-size: 22px 22px !important;
-        border: none !important;
-        width: 36px !important;
-        height: 36px !important;
-        cursor: pointer !important;
-        transition: transform 0.15s ease !important;
-    }}
-    div[data-testid="stChatInput"] button[data-testid="stChatInputMicButton"]:hover {{
-        transform: translateY(-50%) scale(1.15) !important;
-    }}
-    div[data-testid="stChatInput"] button[data-testid="stChatInputMicButton"] > * {{
-        display: none !important;
-    }}
-
-    /* Submit Button (Purple Gradient Send Arrow) */
-    div[data-testid="stChatInput"] button[data-testid="stChatInputSubmitButton"] {{
-        position: absolute !important;
-        right: 14px !important;
-        top: 50% !important;
-        transform: translateY(-50%) !important;
-        z-index: 20 !important;
-        background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%) !important;
-        border-radius: 50% !important;
-        width: 34px !important;
-        height: 34px !important;
-        border: none !important;
-        color: #ffffff !important;
-        display: flex !important;
-        align-items: center !important;
-        justify-content: center !important;
-        box-shadow: 0 2px 10px rgba(168, 85, 247, 0.4) !important;
-        transition: transform 0.15s ease !important;
-    }}
-    div[data-testid="stChatInput"] button[data-testid="stChatInputSubmitButton"]:hover {{
-        transform: translateY(-50%) scale(1.1) !important;
-    }}
-    div[data-testid="stChatInput"] button[data-testid="stChatInputStopButton"] {{
-        position: absolute !important;
-        right: 14px !important;
-        top: 50% !important;
-        transform: translateY(-50%) !important;
-        z-index: 20 !important;
-        background: transparent !important;
-        color: #a855f7 !important;
-    }}
-
-    /* Code & Badges */
-    code {{
-        color: #c084fc !important;
-        background-color: rgba(168, 85, 247, 0.1) !important;
-        padding: 2px 6px !important;
-        border-radius: 6px !important;
-        border: 1px solid rgba(168, 85, 247, 0.2) !important;
-    }}
-
-    /* Custom Scrollbars */
-    ::-webkit-scrollbar {{
-        width: 6px;
-        height: 6px;
-    }}
-    ::-webkit-scrollbar-thumb {{
-        background: rgba(255, 255, 255, 0.12);
-        border-radius: 8px;
-    }}
-    ::-webkit-scrollbar-thumb:hover {{
-        background: rgba(168, 85, 247, 0.4);
-    }}
-
-    /* Commercial Dark Glass Buttons */
-    div.stButton > button {{
-        background: rgba(255, 255, 255, 0.05) !important;
-        background-color: rgba(255, 255, 255, 0.05) !important;
-        border: 1px solid rgba(255, 255, 255, 0.1) !important;
-        color: #f1f5f9 !important;
-        border-radius: 12px !important;
-        font-weight: 600 !important;
-        font-size: 0.88rem !important;
-        padding: 8px 16px !important;
-        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
-        box-shadow: none !important;
-        backdrop-filter: blur(8px) !important;
-    }}
-    div.stButton > button:hover {{
-        background: rgba(168, 85, 247, 0.18) !important;
-        background-color: rgba(168, 85, 247, 0.18) !important;
-        border-color: rgba(168, 85, 247, 0.5) !important;
-        color: #ffffff !important;
-        transform: translateY(-1px) !important;
-        box-shadow: 0 4px 18px rgba(168, 85, 247, 0.25) !important;
-    }}
-    div.stButton > button:active {{
-        transform: translateY(0px) scale(0.98) !important;
-    }}
-
-    /* Primary Gradient Buttons */
-    div.stButton > button[kind="primary"],
-    div.stButton > button[data-testid="baseButton-primary"] {{
-        background: linear-gradient(135deg, #7c3aed 0%, #4f46e5 100%) !important;
-        background-color: #7c3aed !important;
-        border: 1px solid rgba(168, 85, 247, 0.55) !important;
-        color: #ffffff !important;
-        border-radius: 20px !important;
-        font-weight: 700 !important;
-        box-shadow: 0 4px 18px rgba(124, 58, 237, 0.4) !important;
-    }}
-    div.stButton > button[kind="primary"]:hover,
-    div.stButton > button[data-testid="baseButton-primary"]:hover {{
-        background: linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%) !important;
-        border-color: rgba(192, 132, 252, 0.8) !important;
-        transform: translateY(-1px) scale(1.02) !important;
-        box-shadow: 0 6px 24px rgba(124, 58, 237, 0.6) !important;
-    }}
-
-    /* Inputs, Selects, and Expanders */
-    div[data-baseweb="input"],
-    div[data-baseweb="base-input"],
-    div[data-baseweb="select"] > div {{
-        background: rgba(19, 22, 38, 0.8) !important;
-        background-color: rgba(19, 22, 38, 0.8) !important;
-        border: 1px solid rgba(255, 255, 255, 0.1) !important;
-        color: #f8fafc !important;
-        border-radius: 12px !important;
-    }}
-    div[data-baseweb="input"] input,
-    div[data-baseweb="base-input"] textarea {{
-        color: #f8fafc !important;
-    }}
-    div[data-testid="stExpander"] {{
-        background: rgba(19, 22, 38, 0.6) !important;
-        border: 1px solid rgba(255, 255, 255, 0.08) !important;
-        border-radius: 14px !important;
-    }}
-    div[data-testid="stExpander"] details summary {{
-        color: #cbd5e1 !important;
-    }}
-</style>
-""", unsafe_allow_html=True)
-
-# ---------------------------------------------------------------------------
-# Sidebar Navigation (Linear / ChatGPT Commercial Layout)
+# Refined Executive Sidebar
 # ---------------------------------------------------------------------------
 with st.sidebar:
-    # 1. Branding Header
-    st.markdown("""
-    <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 18px; padding: 4px 6px;">
-        <div style="width: 38px; height: 38px; border-radius: 10px; background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%); display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 15px rgba(168, 85, 247, 0.45); font-size: 1.25rem;">
-            🌌
-        </div>
-        <div>
-            <div style="font-weight: 800; font-size: 1.15rem; letter-spacing: -0.3px; line-height: 1.1;">Agent RAG</div>
-            <div style="font-size: 0.72rem; color: #a855f7; font-weight: 600; text-transform: uppercase; letter-spacing: 0.8px;">Cognitive Co-Pilot</div>
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
-
-    # 2. Primary "+ New Chat" Button
-    if st.button("＋ New Conversation", key="sb_new_chat_btn", use_container_width=True, type="primary"):
-        st.session_state.messages = []
-        st.session_state.active_doc_id = None
-        st.session_state.active_file = None
-        st.session_state.active_link = None
-        st.session_state.active_view = "chat"
-        st.rerun()
-
-    st.write("")
-
-    # 3. Main Navigation Views
-    st.caption("PLATFORM")
-    v = st.session_state.active_view
-    nav_col1, nav_col2 = st.columns(2)
-    with nav_col1:
-        if st.button("🏠 Overview", use_container_width=True, key="nav_dash_btn", type="primary" if v == "dashboard" else "secondary"):
-            st.session_state.active_view = "dashboard"
+    # Upper Section: Workspace & File Upload Controls
+    with st.container(key="sidebar_top_box"):
+        robot_side = f'<img src="data:image/png;base64,{robot_b64}" width="28" height="28" style="border-radius: 50%; border: 1.5px solid #7dd3fc; vertical-align: middle;">' if robot_b64 else '🤖'
+        st.markdown(f'<div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">{robot_side}<span style="font-size: 1.15rem; font-weight: 700; color: #0369a1;">Agent Rag</span></div>', unsafe_allow_html=True)
+        
+        # New Chat
+        if st.button("New Chat", key="new_chat_btn", use_container_width=True):
+            st.session_state.messages = []
             st.rerun()
-    with nav_col2:
-        if st.button("💬 Co-Pilot", use_container_width=True, key="nav_chat_btn", type="primary" if v == "chat" else "secondary"):
-            st.session_state.active_view = "chat"
-            st.rerun()
-
-    nav_col3, nav_col4 = st.columns(2)
-    with nav_col3:
-        if st.button("📑 Documents", use_container_width=True, key="nav_docs_btn", type="primary" if v == "documents" else "secondary"):
-            st.session_state.active_view = "documents"
-            st.rerun()
-    with nav_col4:
-        if st.button("🔍 RAG Search", use_container_width=True, key="nav_search_btn", type="primary" if v == "search" else "secondary"):
-            st.session_state.active_view = "search"
-            st.rerun()
-
-    if st.button("📊 Analytics & Insights", use_container_width=True, key="nav_analytics_btn", type="primary" if v == "analytics" else "secondary"):
-        st.session_state.active_view = "analytics"
-        st.rerun()
-
-    st.write("")
-
-    # 4. Recent Chat Queries (Real Data from SQLite)
-    st.caption("🕒 RECENT CONVERSATIONS")
-    recent_queries = get_recent_chat_queries("usr_default", limit=5)
-    if recent_queries:
-        for idx_q, q_text in enumerate(recent_queries):
-            short_q = q_text if len(q_text) <= 28 else q_text[:26] + "..."
-            if st.button(f"💬 {short_q}", key=f"rec_q_{idx_q}", use_container_width=True):
-                st.session_state.active_view = "chat"
-                st.session_state.messages.append({"role": "user", "content": q_text})
-                # Process turn directly
-                state: AgentState = {
-                    "user_id": "usr_default",
-                    "user_name": "Aarav Sharma",
-                    "query": q_text,
-                    "attached_file_path": None,
-                    "attached_file_type": None,
-                    "attached_link": None,
-                    "active_dataframe": None,
-                    "route": None,
-                    "response": None,
-                    "mode": "auto",
-                    "active_doc_id": st.session_state.active_doc_id
-                }
-                res = st.session_state.assistant.process_turn(state)
-                st.session_state.messages.append({
-                    "role": "assistant",
-                    "content": res.get("response", "No response."),
-                    "route": res.get("route")
-                })
-                st.rerun()
-    else:
-        st.caption("No previous sessions recorded yet.")
-
-    st.write("")
-
-    # 5. Quick Ingestion Drawer in Sidebar
-    with st.expander("⚡ Quick Ingest / Attach", expanded=False):
-        sb_url = st.text_input("Ingest Link", placeholder="https://...", key="sb_quick_url", label_visibility="collapsed")
-        if st.button("Ingest Link", key="sb_btn_ingest_url", use_container_width=True):
-            if sb_url.strip():
-                with st.spinner("Processing link..."):
-                    u_res = st.session_state.assistant.rag_engine.ingest_url(
-                        sb_url.strip(),
-                        gemini_service=st.session_state.assistant.gemini
-                    )
-                    if u_res.get("status") == "Ready":
-                        st.success(f"Indexed '{u_res.get('title')[:20]}'!")
-                        st.rerun()
-                    else:
-                        st.error(u_res.get("error"))
-
-        sb_up = st.file_uploader(
-            "Upload File",
-            type=["pdf", "docx", "pptx", "txt", "csv", "xlsx", "png", "jpg", "mp3", "wav", "mp4"],
-            key=f"sb_quick_up_{st.session_state.file_uploader_key}",
-            label_visibility="collapsed"
-        )
-        if sb_up is not None:
-            temp_p = os.path.join(tempfile.gettempdir(), sb_up.name)
-            with open(temp_p, "wb") as f_out:
-                f_out.write(sb_up.getbuffer())
-            with st.spinner("Indexing file into ChromaDB..."):
-                f_res = st.session_state.assistant.rag_engine.ingest_file(
-                    temp_p, sb_up.name, gemini_service=st.session_state.assistant.gemini
-                )
-                if f_res.get("status") == "Ready":
-                    st.success(f"Indexed '{sb_up.name}'!")
-                    st.session_state.file_uploader_key += 1
-                    st.rerun()
-
-    # 6. Enterprise Pro Card (Matching Screenshot)
-    st.markdown("""
-    <div style="background: linear-gradient(135deg, rgba(99, 102, 241, 0.15) 0%, rgba(168, 85, 247, 0.12) 100%); border: 1px solid rgba(168, 85, 247, 0.3); border-radius: 14px; padding: 14px; margin-top: 14px;">
-        <div style="display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 0.85rem; color: #c084fc;">
-            <span>💎</span> Agent RAG Pro
-        </div>
-        <div style="font-size: 0.74rem; color: #94a3b8; margin: 4px 0 10px 0; line-height: 1.4;">
-            Hybrid ChromaDB vector engine, multi-page OCR, and video intelligence active.
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
-
-    # 7. User Profile at Bottom
-    st.divider()
-    user_prof = get_user_profile("usr_default")
-    user_name = user_prof.get("full_name", "Aarav Sharma")
-    user_email = user_prof.get("email", "aarav@example.com")
-    
-    st.markdown(f"""
-    <div style="display: flex; align-items: center; justify-content: space-between; padding: 4px 2px;">
-        <div style="display: flex; align-items: center; gap: 10px;">
-            <div style="width: 34px; height: 34px; border-radius: 50%; background: #4f46e5; color: white; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0.85rem;">
-                {user_name[0]}
-            </div>
-            <div>
-                <div style="font-weight: 700; font-size: 0.84rem; color: {text_primary};">{user_name}</div>
-                <div style="font-size: 0.70rem; color: {text_secondary};">{user_email}</div>
-            </div>
-        </div>
-        <span style="font-size: 0.75rem; color: #34d399;">●</span>
-    </div>
-    """, unsafe_allow_html=True)
-
-    with st.expander("⚙️ Settings & API Key"):
-        api_key_input = st.text_input(
-            "Gemini API Key",
-            type="password",
-            value=st.session_state.api_key,
-            key="api_key_input",
-            on_change=on_api_key_update
-        )
-        if st.session_state.api_key:
-            st.caption("🟢 Active Google Gemini Engine")
-        else:
-            st.caption("💡 Operating in Autonomous Local Mode")
-
-# ---------------------------------------------------------------------------
-# Main Stage Router
-# ---------------------------------------------------------------------------
-view = st.session_state.active_view
-stats = get_system_stats()
-preset_action = None
-
-# ===========================================================================
-# VIEW 1: DASHBOARD OVERVIEW (Home)
-# ===========================================================================
-if view == "dashboard":
-    # 1. 3D Nebula Orb & Hero Greeting
-    st.markdown(f"""
-    <div class="nebula-orb-container">
-        <div class="nebula-orb"></div>
-        <div class="hero-title-nebula">Welcome to your cognitive co-pilot</div>
-        <div class="hero-subtitle-nebula">
-            I am Agent RAG. You can ask me to analyze multi-page documents, synthesize tabular data, query video timestamps, or search your entire multimodal library.
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
-
-    # 2. Starter Prompt Cards (Exact match to uploaded image)
-    p_col1, p_col2, p_col3 = st.columns(3)
-    with p_col1:
-        st.markdown("""
-        <div class="prompt-box">
-            <div class="prompt-tag"><span>&lt;/&gt;</span> Deep Document Analysis</div>
-            <div class="prompt-desc">Explain complex architecture, extract security frameworks, and audit citations from uploaded PDFs.</div>
-        </div>
-        """, unsafe_allow_html=True)
-        if st.button("Analyze Documents", key="btn_p1", use_container_width=True):
-            preset_action = "Explain the key architecture, security models, and findings from my uploaded documents."
-            st.session_state.active_view = "chat"
-            st.rerun()
-
-    with p_col2:
-        st.markdown("""
-        <div class="prompt-box">
-            <div class="prompt-tag"><span>⏱</span> Timeline & Transcripts</div>
-            <div class="prompt-desc">Query 20-minute video lectures or recorded audio and retrieve answers with exact [MM:SS] timestamps.</div>
-        </div>
-        """, unsafe_allow_html=True)
-        if st.button("Explore Timelines", key="btn_p2", use_container_width=True):
-            preset_action = "Summarize the key events, speakers, and topics with exact timestamps from my media."
-            st.session_state.active_view = "chat"
-            st.rerun()
-
-    with p_col3:
-        st.markdown("""
-        <div class="prompt-box">
-            <div class="prompt-tag"><span>💡</span> Cross-Source Synthesis</div>
-            <div class="prompt-desc">Cross-reference Web URLs, Office presentations, and research papers to generate executive summaries.</div>
-        </div>
-        """, unsafe_allow_html=True)
-        if st.button("Synthesize Knowledge", key="btn_p3", use_container_width=True):
-            preset_action = "Synthesize key insights across all my uploaded knowledge sources into a strategic briefing."
-            st.session_state.active_view = "chat"
-            st.rerun()
-
-    st.write("")
-
-    # 3. Real Backend Statistics Cards
-    st.markdown("#### 📈 Real-Time Knowledge Repository Statistics")
-    s1, s2, s3, s4, s5, s6 = st.columns(6)
-    with s1:
-        st.markdown(f'<div class="stat-box"><div class="stat-num">{stats["total_documents"]}</div><div class="stat-label">Total Documents</div></div>', unsafe_allow_html=True)
-    with s2:
-        st.markdown(f'<div class="stat-box"><div class="stat-num" style="background: linear-gradient(135deg, #10b981 0%, #34d399 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">{stats["ready_documents"]}</div><div class="stat-label">Ready & Searchable</div></div>', unsafe_allow_html=True)
-    with s3:
-        st.markdown(f'<div class="stat-box"><div class="stat-num" style="background: linear-gradient(135deg, #6366f1 0%, #818cf8 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">{stats["processing_documents"]}</div><div class="stat-label">In Processing</div></div>', unsafe_allow_html=True)
-    with s4:
-        st.markdown(f'<div class="stat-box"><div class="stat-num" style="background: linear-gradient(135deg, #ef4444 0%, #f87171 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">{stats["failed_documents"]}</div><div class="stat-label">Failed</div></div>', unsafe_allow_html=True)
-    with s5:
-        st.markdown(f'<div class="stat-box"><div class="stat-num">{stats["total_chunks"]}</div><div class="stat-label">Indexed Chunks</div></div>', unsafe_allow_html=True)
-    with s6:
-        st.markdown(f'<div class="stat-box"><div class="stat-num">{stats["total_queries"]}</div><div class="stat-label">Total Queries</div></div>', unsafe_allow_html=True)
-
-    st.write("")
-
-    # 4. Quick Action Control Cards
-    st.markdown("#### ⚡ Quick Actions")
-    qa1, qa2, qa3, qa4 = st.columns(4)
-    with qa1:
-        if st.button("📤 Upload Documents", use_container_width=True):
-            st.session_state.active_view = "documents"
-            st.rerun()
-    with qa2:
-        if st.button("🌐 Ingest Web URL", use_container_width=True):
-            st.session_state.active_view = "documents"
-            st.rerun()
-    with qa3:
-        if st.button("🔍 Search Knowledge Base", use_container_width=True):
-            st.session_state.active_view = "search"
-            st.rerun()
-    with qa4:
-        if st.button("💬 Start New Chat", use_container_width=True):
-            st.session_state.active_view = "chat"
-            st.rerun()
-
-# ===========================================================================
-# VIEW 2: AI CHAT & CO-PILOT
-# ===========================================================================
-elif view == "chat":
-    # Header bar
-    st.markdown("""
-    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255, 255, 255, 0.08); padding-bottom: 12px; margin-bottom: 16px;">
-        <div style="display: flex; align-items: center; gap: 10px;">
-            <div style="font-weight: 800; font-size: 1.1rem; color: #f8fafc;">Cognitive Co-Pilot</div>
-            <span class="badge-ready">● Model Active</span>
-        </div>
-        <div style="font-size: 0.8rem; color: #94a3b8;">
-            Hybrid ChromaDB Retrieval • Anti-Hallucination Guardrail Active
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
-
-    # Active targeted document banner
-    if st.session_state.get("active_doc_id"):
-        target_rec = get_document(st.session_state.active_doc_id)
-        if target_rec:
-            col_target_info, col_target_clear = st.columns([3.8, 1.2], vertical_alignment="center")
-            with col_target_info:
-                f_sz = round((target_rec.get("file_size_bytes") or 0) / (1024 * 1024), 2)
-                st.markdown(
-                    f'<div style="background: rgba(99, 102, 241, 0.15); border: 1px solid rgba(168, 85, 247, 0.4); border-radius: 12px; padding: 10px 16px; color: #c084fc; font-weight: 600; font-size: 0.88rem;">'
-                    f'🎯 Targeted Document: <b>{target_rec["filename"]}</b> ({f_sz} MB • {target_rec.get("page_count", 1)} pages)</div>',
-                    unsafe_allow_html=True
-                )
-            with col_target_clear:
-                if st.button("Detach Target", key="detach_active_target_btn", use_container_width=True):
-                    st.session_state.active_doc_id = None
-                    st.session_state.active_file = None
-                    st.rerun()
-
-            # Active doc quick actions
-            d_c1, d_c2, d_c3, d_c4 = st.columns(4)
-            if d_c1.button("Summarize", key="act_sum_doc", use_container_width=True):
-                preset_action = f"Provide a comprehensive summary and key takeaways of '{target_rec['filename']}'."
-            if d_c2.button("Exam Q&A", key="act_qa_doc", use_container_width=True):
-                preset_action = f"Generate 5 important questions and detailed answers based on '{target_rec['filename']}'."
-            if d_c3.button("Key Concepts", key="act_con_doc", use_container_width=True):
-                preset_action = f"Extract the core topics, definitions, and concepts from '{target_rec['filename']}'."
-            if d_c4.button("Revision Notes", key="act_not_doc", use_container_width=True):
-                preset_action = f"Create concise study and revision notes based on '{target_rec['filename']}'."
-
-    # Chat Feed
-    asst_avatar = ROBOT_AVATAR_PATH if os.path.exists(ROBOT_AVATAR_PATH) else "🌌"
-
-    if len(st.session_state.messages) == 0:
-        st.markdown(f"""
-        <div style="text-align: center; padding: 36px 0 20px 0;">
-            <div style="font-size: 1.5rem; font-weight: 800; color: #f8fafc; margin-bottom: 6px;">How can I assist you today?</div>
-            <div style="font-size: 0.9rem; color: #94a3b8; max-width: 500px; margin: 0 auto 20px auto;">
-                Ask any question across your uploaded documents, media transcripts, or web knowledge base.
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
-
-        sc1, sc2, sc3 = st.columns(3)
-        with sc1:
-            if st.button("What is the CIA Triad?", use_container_width=True):
-                preset_action = "What is the CIA Triad in database security and where is it explained?"
-        with sc2:
-            if st.button("What are Access Control Models?", use_container_width=True):
-                preset_action = "Explain Discretionary and Role-Based Access Control models with citations."
-        with sc3:
-            if st.button("Audit Document Citations", use_container_width=True):
-                preset_action = "Show me the top security recommendations across all indexed documents."
-
-    for msg in st.session_state.messages:
-        is_user = msg["role"] == "user"
-        avatar = "👤" if is_user else asst_avatar
-        with st.chat_message(msg["role"], avatar=avatar):
-            st.markdown(msg["content"])
-            if not is_user and msg.get("route") == "MULTIMODAL_RAG":
-                st.markdown("""
-                <div style="font-size: 0.76rem; color: #a855f7; margin-top: 8px; font-weight: 600;">
-                    ✓ Grounded hybrid retrieval with verified citations
-                </div>
-                """, unsafe_allow_html=True)
-
-# ===========================================================================
-# VIEW 3: DOCUMENT MANAGEMENT DASHBOARD
-# ===========================================================================
-elif view == "documents":
-    st.markdown("### 📑 Document Management Dashboard")
-    st.caption("Upload, inspect, reprocess, and manage all your documents and multi-modal knowledge sources.")
-
-    # High-level KPIs
-    all_docs = list_documents()
-    ready_docs = [d for d in all_docs if d.get("processing_status") == "Ready"]
-    proc_docs = [d for d in all_docs if d.get("processing_status") not in ["Ready", "Failed"]]
-    failed_docs = [d for d in all_docs if d.get("processing_status") == "Failed"]
-
-    k1, k2, k3, k4 = st.columns(4)
-    with k1:
-        st.markdown(f'<div class="stat-box"><div class="stat-num">{len(all_docs)}</div><div class="stat-label">Total Documents</div></div>', unsafe_allow_html=True)
-    with k2:
-        st.markdown(f'<div class="stat-box"><div class="stat-num" style="background: linear-gradient(135deg, #10b981 0%, #34d399 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">{len(ready_docs)}</div><div class="stat-label">Ready & Searchable</div></div>', unsafe_allow_html=True)
-    with k3:
-        st.markdown(f'<div class="stat-box"><div class="stat-num" style="background: linear-gradient(135deg, #6366f1 0%, #818cf8 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">{len(proc_docs)}</div><div class="stat-label">In Processing</div></div>', unsafe_allow_html=True)
-    with k4:
-        st.markdown(f'<div class="stat-box"><div class="stat-num" style="background: linear-gradient(135deg, #ef4444 0%, #f87171 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">{len(failed_docs)}</div><div class="stat-label">Failed</div></div>', unsafe_allow_html=True)
-
-    st.write("")
-
-    # Multi-File & URL Ingestion Area
-    with st.expander("📤 Upload New Documents or Ingest Web Links", expanded=(len(all_docs) == 0)):
-        tab_up_file, tab_up_url = st.tabs(["📁 Multi-File Upload", "🌐 Ingest Web URL / YouTube"])
-        with tab_up_file:
-            uploaded_files = st.file_uploader(
-                "Upload Multiple Documents (PDF, DOCX, DOC, PPTX, TXT, CSV, XLSX, PNG, JPG, JPEG, WEBP, MP4, MOV, AVI, MKV, MP3, WAV, M4A)",
-                type=["pdf", "docx", "doc", "pptx", "txt", "csv", "xlsx", "xls", "png", "jpg", "jpeg", "webp", "mp4", "mov", "avi", "mkv", "mp3", "wav", "m4a"],
-                accept_multiple_files=True,
-                key=f"dash_multi_uploader_{st.session_state.file_uploader_key}"
-            )
-            if uploaded_files:
-                if st.button(f"📥 Process & Index {len(uploaded_files)} File(s)", type="primary", use_container_width=True):
-                    prog = st.progress(0, text="Starting batch ingestion...")
-                    for idx_f, f in enumerate(uploaded_files):
-                        prog.progress((idx_f) / len(uploaded_files), text=f"Processing {f.name}...")
-                        temp_p = os.path.join(tempfile.gettempdir(), f.name)
-                        with open(temp_p, "wb") as out_f:
-                            out_f.write(f.getbuffer())
-                        res = st.session_state.assistant.rag_engine.ingest_file(
-                            src_file_path=temp_p,
-                            filename=f.name,
-                            gemini_service=st.session_state.assistant.gemini
-                        )
-                    prog.progress(1.0, text="Batch processing completed!")
-                    st.success(f"Indexed {len(uploaded_files)} document(s) successfully!")
-                    st.session_state.file_uploader_key += 1
-                    st.rerun()
-
-        with tab_up_url:
-            col_u1, col_u2 = st.columns([3.5, 1])
-            with col_u1:
-                dash_url_val = st.text_input("Enter Web URL, YouTube link, or Wikipedia page", placeholder="https://...", key="dash_url_input", label_visibility="collapsed")
-            with col_u2:
-                if st.button("Ingest Link", use_container_width=True, key="dash_url_btn"):
-                    if dash_url_val.strip():
-                        with st.spinner("Extracting content and generating embeddings..."):
-                            u_res = st.session_state.assistant.rag_engine.ingest_url(
-                                dash_url_val.strip(),
-                                gemini_service=st.session_state.assistant.gemini
-                            )
-                            if u_res.get("status") == "Ready":
-                                st.success(f"Indexed '{u_res.get('title')}' successfully!")
-                                st.rerun()
-                            else:
-                                st.error(f"Failed to ingest URL: {u_res.get('error')}")
-
-    st.write("")
-
-    # Document Repository List
-    st.markdown("#### 📚 Uploaded Documents & Indexes")
-    if not all_docs:
-        st.info("No documents uploaded yet. Use the upload box above to add your first PDF, Office document, image, audio, video, or web link!")
-    else:
-        for doc in all_docs:
-            d_id = doc["doc_id"]
-            status = doc.get("processing_status", "Uploaded")
-            f_type = doc.get("file_type", "doc").upper()
-            size_mb = round((doc.get("file_size_bytes") or 0) / (1024 * 1024), 2)
-            pages = doc.get("page_count", 0)
-            chunks = doc.get("chunk_count", 0)
-            upload_dt = doc.get("upload_timestamp", "")
-
-            pill_class = "badge-ready" if status == "Ready" else ("badge-failed" if status == "Failed" else "badge-progress")
-            status_emoji = "✅" if status == "Ready" else ("❌" if status == "Failed" else "⏳")
-
-            with st.container():
-                st.markdown(f"""
-                <div class="saas-card">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                        <div style="display: flex; align-items: center; gap: 10px;">
-                            <span style="background: rgba(255, 255, 255, 0.08); padding: 3px 8px; border-radius: 6px; font-weight: 700; font-size: 0.72rem; color: #c084fc;">{f_type}</span>
-                            <span style="font-weight: 700; font-size: 1.05rem; color: #f8fafc;">{doc['filename']}</span>
-                        </div>
-                        <span class="{pill_class}">{status_emoji} {status}</span>
-                    </div>
-                    <div style="font-size: 0.82rem; color: #94a3b8; margin-bottom: 10px;">
-                        <span>📦 Size: <b>{size_mb} MB</b></span> &nbsp;•&nbsp;
-                        <span>📄 Pages: <b>{pages}</b></span> &nbsp;•&nbsp;
-                        <span>🧩 Chunks: <b>{chunks}</b></span> &nbsp;•&nbsp;
-                        <span>📅 Uploaded: <b>{upload_dt}</b></span>
-                    </div>
-                    <div style="font-size: 0.78rem; color: #cbd5e1; background: rgba(255, 255, 255, 0.03); padding: 6px 12px; border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.05); margin-bottom: 10px;">
-                        <span>Extraction: <b>{doc.get('extraction_status', 'Pending')}</b></span> &nbsp;|&nbsp;
-                        <span>Embedding: <b>{doc.get('embedding_status', 'Pending')}</b></span> &nbsp;|&nbsp;
-                        <span>Indexing: <b>{doc.get('indexing_status', 'Pending')}</b></span>
-                    </div>
-                </div>
-                """, unsafe_allow_html=True)
-
-                if doc.get("error_message"):
-                    st.error(f"Error: {doc['error_message']}")
-
-                b_c1, b_c2, b_c3, b_c4 = st.columns([1.5, 1.2, 1.2, 1.2])
-                with b_c1:
-                    is_active = (st.session_state.active_doc_id == d_id)
-                    btn_label = "🎯 Target in Chat" if not is_active else "⭐ Active Target"
-                    if st.button(btn_label, key=f"target_{d_id}", use_container_width=True, disabled=is_active):
-                        st.session_state.active_doc_id = d_id
-                        st.session_state.active_view = "chat"
-                        st.rerun()
-                with b_c2:
-                    if st.button("🔄 Reprocess", key=f"reproc_{d_id}", use_container_width=True):
-                        with st.spinner(f"Reprocessing '{doc['filename']}'..."):
-                            st.session_state.assistant.rag_engine.reprocess_document(
-                                d_id, gemini_service=st.session_state.assistant.gemini
-                            )
-                            st.rerun()
-                with b_c3:
-                    if status == "Failed":
-                        if st.button("🔁 Retry", key=f"retry_{d_id}", use_container_width=True):
-                            with st.spinner(f"Retrying '{doc['filename']}'..."):
-                                st.session_state.assistant.rag_engine.reprocess_document(
-                                    d_id, gemini_service=st.session_state.assistant.gemini
-                                )
-                                st.rerun()
-                    else:
-                        st.write("")
-                with b_c4:
-                    if st.button("🗑️ Delete", key=f"del_{d_id}", use_container_width=True):
-                        st.session_state.assistant.rag_engine.delete_document(d_id)
-                        if st.session_state.active_doc_id == d_id:
-                            st.session_state.active_doc_id = None
-                        st.rerun()
-
-                with st.expander(f"ℹ️ View Details & Indexed Chunks ({chunks})", expanded=False):
-                    doc_chunks = get_document_chunks(d_id)
-                    st.write(f"**Doc ID:** `{d_id}`")
-                    st.write(f"**Storage Path:** `{doc.get('storage_path')}`")
-                    if doc_chunks:
-                        for idx_c, ch in enumerate(doc_chunks[:6], 1):
-                            loc = f"Page {ch.get('page_number', 1)}" if not ch.get("timestamp_str") else f"Timestamp [{ch.get('timestamp_str')}]"
-                            st.markdown(f"**Chunk #{idx_c}** ({loc}):")
-                            st.markdown(f"> *{ch.get('content')[:250]}...*")
-                    else:
-                        st.caption("No chunks currently extracted.")
-
-# ===========================================================================
-# VIEW 4: RAG SEARCH EXPLORER
-# ===========================================================================
-elif view == "search":
-    st.markdown("### 🔍 Multi-Modal RAG Search Explorer")
-    st.caption("Execute hybrid semantic vector + lexical search across your entire repository with cosine similarity scoring.")
-
-    ready_docs_list = [d for d in list_documents() if d.get("processing_status") == "Ready"]
-    doc_options = ["All Documents (Global Library Search)"] + [f"{d['filename']} (ID: {d['doc_id']})" for d in ready_docs_list]
-
-    col_scope, _ = st.columns([2.5, 1])
-    with col_scope:
-        selected_scope = st.selectbox("Search Target Scope:", doc_options, key="rag_search_scope")
-
-    target_doc_id = None
-    if selected_scope != "All Documents (Global Library Search)":
-        target_doc_id = selected_scope.split("ID: ")[-1].rstrip(")")
-
-    col_s_inp, col_s_btn = st.columns([4, 1.2], vertical_alignment="bottom")
-    with col_s_inp:
-        search_query_val = st.text_input(
-            "Search Query",
-            placeholder="🔍 Ask a question or search for concepts, tables, topics, transcripts...",
-            key="rag_explorer_query",
-            label_visibility="collapsed"
-        )
-    with col_s_btn:
-        do_search = st.button("🔍 Search", type="primary", use_container_width=True, key="rag_explorer_btn")
-
-    if (do_search or search_query_val) and search_query_val.strip():
-        with st.spinner("Executing hybrid retrieval & grounded synthesis..."):
-            rag_output = st.session_state.assistant.rag_engine.answer_rag_query(
-                query=search_query_val.strip(),
-                doc_id=target_doc_id,
-                gemini_service=st.session_state.assistant.gemini
-            )
-            raw_matches = st.session_state.assistant.rag_engine.search(
-                query=search_query_val.strip(),
-                doc_id=target_doc_id,
-                top_k=5
-            )
-
-        st.markdown("#### 💡 Grounded AI Answer")
-        st.markdown(rag_output.get("answer", "No response generated."))
 
         st.write("")
-        st.markdown("#### 📚 Retrieved Chunks & Exact Locations")
-        if raw_matches:
-            for idx_m, m in enumerate(raw_matches, 1):
-                loc = f"Page {m.get('page_number', 1)}" if not m.get("timestamp_str") else f"Timestamp [{m.get('timestamp_str')}]"
-                score_pct = int(max(0, min(100, (m.get('score', 0) + 1.0) / 2.0 * 100))) if m.get("score") is not None else 80
-                with st.expander(f"Reference #{idx_m}: {m.get('filename')} ({loc}) — {score_pct}% Match", expanded=(idx_m==1)):
-                    st.write(f"**Document:** `{m.get('filename')}` | **Type:** `{m.get('file_type')}` | **Location:** `{loc}`")
-                    st.markdown(f"> {m.get('content')}")
-        else:
-            st.info("No matching chunks retrieved for this query.")
 
-# ===========================================================================
-# VIEW 5: ANALYTICS & INSIGHTS
-# ===========================================================================
-elif view == "analytics":
-    st.markdown("### 📊 Analytics & System Intelligence")
-    st.caption("Repository composition, chunk indexing distribution, and AI routing telemetry.")
+        # -------------------------------------------------------------
+        # All-In-One Unified Attachment Bar (Link / Image URL + File Uploader)
+        # -------------------------------------------------------------
+        st.markdown("###### Attach File, Image, or Link")
 
-    c1, c2, c3 = st.columns(3)
-    with c1:
-        st.markdown(f'<div class="stat-box"><div class="stat-num">{stats["total_documents"]}</div><div class="stat-label">Total Documents Ingested</div></div>', unsafe_allow_html=True)
-    with c2:
-        st.markdown(f'<div class="stat-box"><div class="stat-num">{stats["total_chunks"]}</div><div class="stat-label">Vector Embeddings Indexed</div></div>', unsafe_allow_html=True)
-    with c3:
-        st.markdown(f'<div class="stat-box"><div class="stat-num">{stats["rag_queries"]}</div><div class="stat-label">Grounded RAG Queries</div></div>', unsafe_allow_html=True)
+        # 1. URL / Link input with Attach button in a single sleek row
+        col_url, col_attach = st.columns([3.4, 1.2])
+        with col_url:
+            url_input = st.text_input(
+                "Paste URL",
+                placeholder="🔗 Paste YouTube, Web, or Image Link...",
+                key=f"unified_url_input_{st.session_state.file_uploader_key}",
+                label_visibility="collapsed"
+            )
+        with col_attach:
+            attach_clicked = st.button("Attach", key=f"unified_attach_btn_{st.session_state.file_uploader_key}", use_container_width=True)
+
+        if attach_clicked and url_input.strip():
+            with st.spinner("Inspecting link..."):
+                info = st.session_state.assistant.link_service.fetch_link_info(url_input.strip())
+                if info.get("category") == "image" and info.get("path"):
+                    st.session_state.active_file = {
+                        "path": info["path"],
+                        "type": "image",
+                        "name": info.get("title", "Web Image"),
+                        "size_mb": round(os.path.getsize(info["path"]) / (1024 * 1024), 2)
+                    }
+                    st.session_state.active_link = None
+                    st.session_state.active_df = None
+                else:
+                    st.session_state.active_link = info
+                    st.session_state.active_file = None
+                    st.session_state.active_df = None
+                st.rerun()
+
+        # 2. Direct File Drop & Browse (PDF, Images, Video, Audio, CSV, Excel)
+        uploaded_file = st.file_uploader(
+            "📁 Drag & Drop or Browse File",
+            type=["pdf", "xlsx", "csv", "png", "jpg", "jpeg", "webp", "bmp", "gif", "svg", "jfif", "tiff", "ico", "mp3", "wav", "mp4"],
+            key=f"uploader_{st.session_state.file_uploader_key}",
+            label_visibility="collapsed"
+        )
+
+        if uploaded_file is not None:
+            file_ext = uploaded_file.name.split(".")[-1].lower()
+            image_exts = ["png", "jpg", "jpeg", "webp", "bmp", "gif", "svg", "jfif", "tiff", "ico"]
+            cat = "image" if file_ext in image_exts else \
+                  "audio" if file_ext in ["mp3", "wav"] else \
+                  "video" if file_ext in ["mp4", "mov"] else \
+                  "excel" if file_ext in ["xlsx", "csv"] else \
+                  "pdf" if file_ext == "pdf" else "text"
+
+            temp_dir = tempfile.gettempdir()
+            temp_path = os.path.join(temp_dir, uploaded_file.name)
+            with open(temp_path, "wb") as f:
+                f.write(uploaded_file.getbuffer())
+
+            # Automatically index into ChromaDB & SQLite
+            with st.spinner(f"Indexing {uploaded_file.name}..."):
+                res = st.session_state.assistant.rag_engine.ingest_file(
+                    src_file_path=temp_path,
+                    filename=uploaded_file.name,
+                    gemini_service=st.session_state.assistant.gemini
+                )
+                doc_id = res.get("doc_id")
+
+            st.session_state.active_doc_id = doc_id
+            st.session_state.active_file = {
+                "path": temp_path,
+                "type": cat,
+                "name": uploaded_file.name,
+                "size_mb": round(uploaded_file.size / (1024 * 1024), 2)
+            }
+            st.session_state.active_link = None
+            if cat == "excel":
+                try:
+                    st.session_state.active_df = pd.read_csv(temp_path) if file_ext == "csv" else pd.read_excel(temp_path)
+                except Exception:
+                    pass
+            st.rerun()
+
+        # 3. Active Attachment Status Pill (if attached)
+        if st.session_state.active_file:
+            f_info = st.session_state.active_file
+            icon = "🖼️" if f_info.get("type") == "image" else "🎥" if f_info.get("type") == "video" else "📄"
+            st.caption(f"Active: {icon} **{f_info['name']}** ({f_info['size_mb']} MB)")
+            if st.button("Detach Document", use_container_width=True, key="detach_doc_btn"):
+                st.session_state.active_file = None
+                st.session_state.active_doc_id = None
+                st.session_state.active_df = None
+                st.session_state.file_uploader_key += 1
+                st.rerun()
+
+        elif st.session_state.get("active_link"):
+            l_info = st.session_state.active_link
+            icon = "🎥" if l_info.get("category") == "youtube" else "🖼️" if l_info.get("category") == "image" else "🌐"
+            st.caption(f"Active: {icon} **{l_info.get('title', 'Web Link')[:26]}**")
+            if st.button("Detach Link", use_container_width=True, key="detach_link_btn"):
+                st.session_state.active_link = None
+                st.rerun()
+
+        # 4. Clean Sidebar Document Library (Access all uploaded documents without top tabs)
+        all_docs = list_documents()
+        if all_docs:
+            with st.expander(f"📚 Document Library ({len(all_docs)})", expanded=False):
+                for doc in all_docs:
+                    d_id = doc["doc_id"]
+                    status = doc.get("processing_status", "Ready")
+                    f_name = doc["filename"]
+                    short_f = f_name if len(f_name) <= 16 else f_name[:14] + ".."
+                    size_mb = round((doc.get("file_size_bytes") or 0) / (1024 * 1024), 2)
+
+                    st.markdown(f"**{short_f}** ({size_mb} MB)")
+                    col_st, col_tgt, col_del = st.columns([1.5, 0.75, 0.75])
+                    with col_st:
+                        badge_color = "#059669" if status == "Ready" else ("#dc2626" if status == "Failed" else "#2563eb")
+                        st.markdown(f"<span style='color:{badge_color}; font-size:0.75rem; font-weight:700;'>● {status}</span>", unsafe_allow_html=True)
+                    with col_tgt:
+                        is_current = (st.session_state.get("active_doc_id") == d_id)
+                        if st.button("🎯" if not is_current else "⭐", key=f"sb_tgt_{d_id}", help="Target this document for chat", disabled=is_current):
+                            st.session_state.active_doc_id = d_id
+                            st.session_state.active_file = {
+                                "path": doc.get("storage_path"),
+                                "name": doc.get("filename"),
+                                "type": doc.get("file_type"),
+                                "size_mb": size_mb
+                            }
+                            st.session_state.active_link = None
+                            st.rerun()
+                    with col_del:
+                        if st.button("🗑️", key=f"sb_del_{d_id}", help="Delete Document"):
+                            st.session_state.assistant.rag_engine.delete_document(d_id)
+                            if st.session_state.get("active_doc_id") == d_id:
+                                st.session_state.active_doc_id = None
+                                st.session_state.active_file = None
+                            st.rerun()
+
+    # Bottom Section: Firmly Pinned to the End Line of the Sidebar
+    with st.container(key="sidebar_bottom_box"):
+        st.divider()
+
+        with st.expander("Milestones & Calendar"):
+            from core.festival_calendar import get_festivals_for_window
+            all_festivals = get_festivals_for_window(days_window=30)
+            if all_festivals:
+                for fest in all_festivals[:4]:
+                    d = fest['days_remaining']
+                    d_str = "Today! 🪔" if d == 0 else f"in {d} days"
+                    st.write(f"• **{fest['name']}** ({d_str})")
+            
+            all_contacts = get_contact_events("usr_default", days_window=30)
+            if all_contacts:
+                for c in all_contacts[:3]:
+                    d = c['days_remaining']
+                    d_str = "Today! 🎂" if d == 0 else f"in {d} days"
+                    st.write(f"• **{c['contact_name']}** ({c['event_type']} {d_str})")
+
+        with st.expander("Settings"):
+            api_key_input = st.text_input(
+                "API Key",
+                type="password",
+                value=st.session_state.api_key,
+                key="api_key_input",
+                on_change=on_api_key_update,
+                label_visibility="collapsed"
+            )
+            key_val = (st.session_state.api_key or "").strip()
+            if key_val.startswith("AIzaSy"):
+                st.caption("🟢 Live Google Cloud Gemini API Active")
+            elif key_val.startswith("AQ."):
+                st.caption("ℹ️ AGY internal token detected. Operating with Agent Rag Multimodal Engine.")
+                st.markdown("<div style='font-size:0.75rem;'><a href='https://aistudio.google.com/app/apikey' target='_blank' style='color:#0284c7; text-decoration:none;'>👉 Get official free Gemini API Key (AIzaSy...)</a></div>", unsafe_allow_html=True)
+            elif key_val:
+                st.caption("🟢 API Key Configured")
+            else:
+                st.caption("💡 Operating with Agent Rag Multimodal Engine.")
+                st.markdown("<div style='font-size:0.75rem;'><a href='https://aistudio.google.com/app/apikey' target='_blank' style='color:#0284c7; text-decoration:none;'>👉 Get official free Gemini API Key</a></div>", unsafe_allow_html=True)
+
+# ---------------------------------------------------------------------------
+# Main Canvas
+# ---------------------------------------------------------------------------
+briefing = get_proactive_briefing("usr_default")
+time_info = briefing["time_info"]
+user_name = briefing["user_name"]
+active_festival = briefing["active_festival"]
+contact_events = briefing["contact_events"]
+
+preset_action = None
+
+# Active Targeted Document Banner (if selected from sidebar or attachment)
+if st.session_state.get("active_doc_id"):
+    target_rec = get_document(st.session_state.active_doc_id)
+    if target_rec:
+        col_target_info, col_target_clear = st.columns([3.8, 1.2], vertical_alignment="center")
+        with col_target_info:
+            f_sz = round((target_rec.get("file_size_bytes") or 0) / (1024 * 1024), 2)
+            st.markdown(
+                f'<div class="active-target-badge">🎯 Active Targeted Document: <b>{target_rec["filename"]}</b> '
+                f'({f_sz} MB • {target_rec.get("page_count", 1)} pages)</div>',
+                unsafe_allow_html=True
+            )
+        with col_target_clear:
+            if st.button("Detach Target", key="detach_active_doc_target", use_container_width=True):
+                st.session_state.active_doc_id = None
+                st.session_state.active_file = None
+                st.rerun()
+
+# If chat is empty, render the classy Claude/Gemini style greeting
+if len(st.session_state.messages) == 0:
+    robot_tag = f'<img src="data:image/png;base64,{robot_b64}" width="48" height="48" style="border-radius: 50%; box-shadow: 0 4px 12px rgba(2, 132, 199, 0.22); border: 2px solid #7dd3fc;">' if robot_b64 else '<span>🤖</span>'
+    st.markdown(f"""
+    <div class="hero-wrapper">
+        <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px;">
+            {robot_tag}
+            <div class="hero-badge" style="margin-bottom: 0;">AGENT RAG</div>
+        </div>
+        <div class="hero-title">{time_info['greeting']}, {user_name}</div>
+        <div class="hero-subtitle">How can I assist you with your research, documents, or intelligence workflows today?</div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    # Compact Side-by-Side: Festive Indicator Beside Birthday Reminder
+    active_bdays = [
+        ev for ev in (contact_events or [])
+        if f"{ev.get('contact_name')}_{ev.get('event_type')}_{ev.get('event_month')}_{ev.get('event_day')}" not in st.session_state.dismissed_birthday_alerts
+    ]
+    top_bday = active_bdays[0] if active_bdays else None
+
+    if active_festival or top_bday:
+        col_fest, col_bday = st.columns([1, 1], vertical_alignment="center")
+
+        # Left: Festival Pill
+        if active_festival:
+            with col_fest:
+                f_name = active_festival.get('name') or active_festival.get('festival_name')
+                d = active_festival['days_remaining']
+                d_str = "Today! 🪔" if d == 0 else f"in {d} days ({active_festival.get('event_date', '')})"
+                st.markdown(f"""
+                <div class="festival-pill">
+                    <span>🪔</span>
+                    <span><b>{f_name}</b> is {d_str}</span>
+                </div>
+                """, unsafe_allow_html=True)
+
+        # Right (Beside Festive Pill): Matching Birthday Pill & Actions
+        if top_bday:
+            with col_bday:
+                ev = top_bday
+                ev_id = f"{ev.get('contact_name')}_{ev.get('event_type')}_{ev.get('event_month')}_{ev.get('event_day')}"
+                d = ev['days_remaining']
+                when_str = "Today" if d == 0 else f"in {d}d"
+                
+                b_pill, b_btn, b_x = st.columns([2.5, 0.9, 0.45], vertical_alignment="center")
+                with b_pill:
+                    st.markdown(f"""
+                    <div class="birthday-pill">
+                        <span>🎂</span>
+                        <span><b>{ev['contact_name']}</b> · {when_str}</span>
+                    </div>
+                    """, unsafe_allow_html=True)
+                with b_btn:
+                    if st.button("Wish", key=f"wish_{ev_id}", use_container_width=True):
+                        preset_action = f"Generate 3 warm and creative {ev['event_type']} wishes for my {ev['relationship']} {ev['contact_name']}."
+                with b_x:
+                    if st.button("✕", key=f"close_{ev_id}", help="Dismiss", use_container_width=True):
+                        st.session_state.dismissed_birthday_alerts.add(ev_id)
+                        st.rerun()
 
     st.write("")
-    st.markdown("#### 📂 Repository Modality Distribution")
-    all_d = list_documents()
-    if all_d:
-        types_count = {}
-        for d in all_d:
-            t = d.get("file_type", "other").upper()
-            types_count[t] = types_count.get(t, 0) + 1
-        df_types = pd.DataFrame(list(types_count.items()), columns=["Modality", "Count"])
-        st.bar_chart(df_types.set_index("Modality"), color="#a855f7")
-    else:
-        st.info("No documents uploaded yet to display modality breakdown.")
+
+    # Refined Starter Chips (Clean, text-only, no clunky emoji buttons)
+    st.caption("Suggested Prompts")
+    c1, c2, c3 = st.columns(3)
+    with c1:
+        if st.button("Diwali wishes for colleagues", key="chip_fest", use_container_width=True):
+            preset_action = "Draft 3 professional and warm Diwali wishes for my colleagues."
+    with c2:
+        if st.button("Upcoming birthdays this week", key="chip_bday", use_container_width=True):
+            preset_action = "Who has an upcoming birthday this week and what should I send them?"
+    with c3:
+        if st.button("Explain quantum computing simply", key="chip_ai", use_container_width=True):
+            preset_action = "Explain quantum computing in simple terms with a real-world analogy."
+
+# Active Document Toolbar (Refined, elegant pills)
+if st.session_state.active_file:
+    f_info = st.session_state.active_file
+    st.markdown(f"""
+    <div class="document-chip">
+        <span>📄</span>
+        <span><b>{f_info['name']}</b> ({f_info['size_mb']} MB)</span>
+    </div>
+    """, unsafe_allow_html=True)
+
+    doc_c1, doc_c2, doc_c3, doc_c4 = st.columns(4)
+    if doc_c1.button("Summarize", use_container_width=True):
+        preset_action = f"Provide a comprehensive summary and key takeaways of '{f_info['name']}'."
+    if doc_c2.button("Exam Questions & Answers", use_container_width=True):
+        preset_action = f"Generate 5 important questions and detailed answers based on the contents of '{f_info['name']}'."
+    if doc_c3.button("Key Concepts", use_container_width=True):
+        preset_action = f"Extract the core topics, definitions, and concepts from '{f_info['name']}'."
+    if doc_c4.button("Revision Notes", use_container_width=True):
+        preset_action = f"Create concise study and revision notes based on '{f_info['name']}'."
+
+elif st.session_state.get("active_link"):
+    l_info = st.session_state.active_link
+    l_cat = l_info.get("category", "link")
+    icon = "🎥" if l_cat == "youtube" else "🖼️" if l_cat == "image" else "🌐"
+    st.markdown(f"""
+    <div class="document-chip">
+        <span>{icon}</span>
+        <span><b>{l_info.get('title', 'Web Link')}</b> ({l_cat.upper()})</span>
+    </div>
+    """, unsafe_allow_html=True)
+
+    link_c1, link_c2, link_c3, link_c4 = st.columns(4)
+    if link_c1.button("Summarize", key="act_link_sum", use_container_width=True):
+        preset_action = f"Provide a comprehensive summary and key takeaways of '{l_info.get('title')}'."
+    if link_c2.button("Exam Questions & Answers", key="act_link_qa", use_container_width=True):
+        preset_action = f"Generate 5 important questions and detailed answers based on the contents of '{l_info.get('title')}'."
+    if link_c3.button("Key Concepts", key="act_link_concepts", use_container_width=True):
+        preset_action = f"Extract the core topics, definitions, and concepts from '{l_info.get('title')}'."
+    if link_c4.button("Revision Notes", key="act_link_notes", use_container_width=True):
+        preset_action = f"Create concise study and revision notes based on '{l_info.get('title')}'."
+
+# Chat Feed
+asst_avatar = ROBOT_AVATAR_PATH if os.path.exists(ROBOT_AVATAR_PATH) else "🤖"
+
+for msg in st.session_state.messages:
+    is_user = msg["role"] == "user"
+    avatar = "👤" if is_user else asst_avatar
+    
+    with st.chat_message(msg["role"], avatar=avatar):
+        st.markdown(msg["content"])
+        
+        # Subtle, professional citation footnote
+        if not is_user and msg.get("route") == "MULTIMODAL_RAG":
+            st.markdown("""
+            <div class="source-footnote">
+                <span>📄</span> Grounded retrieval with verified document citations
+            </div>
+            """, unsafe_allow_html=True)
+        elif not is_user and msg.get("route") == "LINK_ANALYSIS":
+            st.markdown("""
+            <div class="source-footnote">
+                <span>🔗</span> Referenced from online link
+            </div>
+            """, unsafe_allow_html=True)
 
 # ---------------------------------------------------------------------------
-# Integrated Fixed Bottom Chat Input Bar (Active Across Views)
+# Integrated Bottom Chat Input (With Built-in Mic on Left Side)
 # ---------------------------------------------------------------------------
-chat_placeholder = "Message Agent RAG, paste link (YouTube/Web), or speak with mic..."
-if st.session_state.active_doc_id:
-    doc_t = get_document(st.session_state.active_doc_id)
-    if doc_t:
-        chat_placeholder = f"Ask about '{doc_t['filename'][:24]}' or speak with mic..."
+if st.session_state.active_file:
+    f_name = st.session_state.active_file['name']
+    short_name = f_name if len(f_name) <= 26 else f_name[:24] + "..."
+    chat_placeholder = f"Ask about '{short_name}' or speak with mic..."
+elif st.session_state.get("active_link"):
+    l_title = st.session_state.active_link.get('title', 'Web Link')
+    short_title = l_title if len(l_title) <= 26 else l_title[:24] + "..."
+    chat_placeholder = f"Ask about '{short_title}' or speak with mic..."
+else:
+    chat_placeholder = "Message Agent Rag, paste a link (YouTube/Web), or speak with mic..."
 
 chat_val = st.chat_input(chat_placeholder, accept_audio=True)
 
@@ -1207,29 +1139,33 @@ if chat_val:
         text_val = chat_val.get("text")
         if audio_file is not None:
             raw_audio_bytes = audio_file.read()
-            with st.spinner("🎧 Transcribing voice audio..."):
+            with st.spinner("🎧 Transcribing your voice..."):
                 transcribed_text = st.session_state.assistant.gemini.transcribe_audio_bytes(raw_audio_bytes)
                 if transcribed_text:
                     user_query = transcribed_text
                     is_voice = True
                 else:
-                    st.warning("Could not detect clear speech. Please speak closer to the mic.")
+                    st.warning("Could not detect clear speech. Please speak closer to the microphone and try again!")
         elif text_val:
             user_query = text_val.strip()
 elif preset_action:
     user_query = preset_action.strip()
 
 if user_query:
-    st.session_state.active_view = "chat"
+    # 1. User Message (tag voice-spoken prompts with a clean indicator)
     user_display = f"🎙️ {user_query}" if is_voice else user_query
 
     st.session_state.messages.append({"role": "user", "content": user_display})
+    with st.chat_message("user", avatar="👤"):
+        if is_voice:
+            st.markdown('<div class="voice-badge"><span>🎙️</span> Spoken via Voice</div>', unsafe_allow_html=True)
+        st.markdown(user_query)
 
-    # Prepare Assistant State
+    # 2. Assistant State Preparation
     f_info = st.session_state.active_file or {}
     state: AgentState = {
         "user_id": "usr_default",
-        "user_name": "Aarav Sharma",
+        "user_name": user_name,
         "query": user_query,
         "attached_file_path": f_info.get("path"),
         "attached_file_type": f_info.get("type"),
@@ -1241,13 +1177,25 @@ if user_query:
         "active_doc_id": st.session_state.get("active_doc_id")
     }
 
-    result = st.session_state.assistant.process_turn(state)
-    route = result.get("route", "GENERAL_CHAT")
-    response = result.get("response", "No response generated.")
+    # 3. Execution
+    with st.chat_message("assistant", avatar=asst_avatar):
+        with st.spinner("Generating response..."):
+            result = st.session_state.assistant.process_turn(state)
+            route = result.get("route", "GENERAL_CHAT")
+            response = result.get("response", "No response generated.")
 
+            st.markdown(response)
+
+            if route == "MULTIMODAL_RAG":
+                st.markdown("""
+                <div class="source-footnote">
+                    <span>📄</span> Referenced from active document
+                </div>
+                """, unsafe_allow_html=True)
+
+    # 4. Save to history
     st.session_state.messages.append({
         "role": "assistant",
         "content": response,
         "route": route
     })
-    st.rerun()
