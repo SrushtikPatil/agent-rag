@@ -32,6 +32,93 @@ except ImportError:
     CHROMA_AVAILABLE = False
 
 
+class SafeEmbeddingService:
+    """
+    Thread-safe, Python 3.14 compatible embedding service.
+    Uses MiniLM ONNX with strictly single-threaded session options to prevent
+    Windows CPython parking-lot semaphore handle invalidation crashes.
+    Includes deterministic 384-dimensional fallback.
+    """
+    def __init__(self):
+        self.session = None
+        self.tokenizer = None
+        self._init_onnx()
+
+    def _init_onnx(self):
+        try:
+            from pathlib import Path
+            import onnxruntime as ort
+            from tokenizers import Tokenizer
+            model_path = Path.home() / ".cache" / "chroma" / "onnx_models" / "all-MiniLM-L6-v2" / "onnx" / "model.onnx"
+            tok_path = Path.home() / ".cache" / "chroma" / "onnx_models" / "all-MiniLM-L6-v2" / "onnx" / "tokenizer.json"
+            if model_path.exists() and tok_path.exists():
+                self.tokenizer = Tokenizer.from_file(str(tok_path))
+                self.tokenizer.enable_truncation(max_length=256)
+                self.tokenizer.enable_padding(pad_id=0, pad_token="[PAD]", length=256)
+
+                so = ort.SessionOptions()
+                so.intra_op_num_threads = 1
+                so.inter_op_num_threads = 1
+                so.execution_mode = ort.ExecutionMode.ORT_SEQUENTIAL
+                so.log_severity_level = 3
+                self.session = ort.InferenceSession(str(model_path), sess_options=so, providers=["CPUExecutionProvider"])
+        except Exception as e:
+            print(f"[SafeEmbeddingService] Initialization note: {e}")
+
+    def embed_documents(self, documents: List[str]) -> List[List[float]]:
+        if not documents:
+            return []
+        if self.session and self.tokenizer:
+            try:
+                import numpy as np
+                all_embs = []
+                batch_size = 16
+                for i in range(0, len(documents), batch_size):
+                    batch = documents[i:i + batch_size]
+                    encoded = [self.tokenizer.encode(d) for d in batch]
+                    input_ids = np.array([e.ids for e in encoded], dtype=np.int64)
+                    attention_mask = np.array([e.attention_mask for e in encoded], dtype=np.int64)
+                    onnx_input = {
+                        "input_ids": input_ids,
+                        "attention_mask": attention_mask,
+                        "token_type_ids": np.zeros(input_ids.shape, dtype=np.int64)
+                    }
+                    output = self.session.run(None, onnx_input)[0]
+                    mask_exp = np.broadcast_to(np.expand_dims(attention_mask, -1), output.shape)
+                    summed = np.sum(output * mask_exp, 1)
+                    denom = np.clip(mask_exp.sum(1), a_min=1e-9, a_max=None)
+                    mean_pooled = summed / denom
+                    norm = np.linalg.norm(mean_pooled, axis=1, keepdims=True)
+                    norm[norm == 0] = 1e-9
+                    normalized = (mean_pooled / norm).astype(np.float32)
+                    all_embs.extend(normalized.tolist())
+                return all_embs
+            except Exception as e:
+                print(f"[SafeEmbeddingService] Inference note: {e}")
+
+        # Deterministic 384-dimensional fallback
+        import hashlib, math
+        fallback_embs = []
+        for doc in documents:
+            vec = [0.0] * 384
+            words = doc.lower().split()
+            if not words:
+                fallback_embs.append(vec)
+                continue
+            for w in words:
+                idx = int(hashlib.md5(w.encode("utf-8")).hexdigest(), 16) % 384
+                vec[idx] += 1.0
+            norm = math.sqrt(sum(x * x for x in vec))
+            if norm > 0:
+                vec = [x / norm for x in vec]
+            fallback_embs.append(vec)
+        return fallback_embs
+
+    def embed_query(self, query: str) -> List[float]:
+        res = self.embed_documents([query])
+        return res[0] if res else [0.0] * 384
+
+
 class MultimodalRAGEngine:
     def __init__(self, persist_dir: Optional[str] = None, storage_dir: Optional[str] = None):
         self.persist_dir = persist_dir or os.path.join(os.path.dirname(__file__), "chroma_db")
@@ -42,6 +129,7 @@ class MultimodalRAGEngine:
         os.makedirs(self.storage_dir, exist_ok=True)
 
         self.processor = DocumentProcessor()
+        self.embed_service = SafeEmbeddingService()
         self.client = None
         self.collection = None
 
@@ -179,12 +267,14 @@ class MultimodalRAGEngine:
                 ids = [c.chunk_id for c in chunks]
                 docs = [c.content for c in chunks]
                 metas = [c.metadata for c in chunks]
+                embs = self.embed_service.embed_documents(docs)
 
-                # ChromaDB batch add (max 500 per batch)
-                batch_size = 300
+                # ChromaDB batch add (max 150 per batch)
+                batch_size = 150
                 for i in range(0, len(ids), batch_size):
                     self.collection.add(
                         ids=ids[i:i + batch_size],
+                        embeddings=embs[i:i + batch_size],
                         documents=docs[i:i + batch_size],
                         metadatas=metas[i:i + batch_size]
                     )
@@ -267,11 +357,19 @@ class MultimodalRAGEngine:
                 except Exception:
                     pass
 
-                self.collection.add(
-                    ids=[c.chunk_id for c in chunks],
-                    documents=[c.content for c in chunks],
-                    metadatas=[c.metadata for c in chunks]
-                )
+                ids = [c.chunk_id for c in chunks]
+                docs = [c.content for c in chunks]
+                metas = [c.metadata for c in chunks]
+                embs = self.embed_service.embed_documents(docs)
+
+                batch_size = 150
+                for i in range(0, len(ids), batch_size):
+                    self.collection.add(
+                        ids=ids[i:i + batch_size],
+                        embeddings=embs[i:i + batch_size],
+                        documents=docs[i:i + batch_size],
+                        metadatas=metas[i:i + batch_size]
+                    )
 
             update_document_status(doc_id, processing_status="Ready", indexing_status="Completed", error_message=None)
             return {"success": True, "doc_id": doc_id, "title": title, "chunks": len(chunks), "chunks_count": len(chunks), "status": "Ready"}
@@ -333,8 +431,9 @@ class MultimodalRAGEngine:
         if self.collection:
             try:
                 where_clause = {"doc_id": doc_id} if doc_id else None
+                q_emb = self.embed_service.embed_query(query)
                 chroma_res = self.collection.query(
-                    query_texts=[query],
+                    query_embeddings=[q_emb],
                     n_results=min(top_k * 2, 10),
                     where=where_clause
                 )
@@ -411,16 +510,18 @@ class MultimodalRAGEngine:
 
         matched_chunks = []
         for ch in raw_chunks:
+            ch_tokens = set(re.findall(r'\b[a-zA-Z0-9]{3,}\b', ch["content"].lower()))
+            overlap = len(q_meaningful.intersection(ch_tokens)) if q_meaningful else 1
+
             if ch.get("source_type") == "lexical":
-                matched_chunks.append(ch)
-            elif ch.get("score", 0) >= 0.35:
+                if not q_meaningful or overlap >= 1:
+                    matched_chunks.append(ch)
+            elif ch.get("score", 0) >= 0.50:
                 # Strong vector similarity match
                 matched_chunks.append(ch)
-            elif ch.get("score", 0) >= 0.15 and q_meaningful:
-                # Moderate vector match: check meaningful keyword overlap
-                ch_tokens = set(re.findall(r'\b[a-zA-Z0-9]{3,}\b', ch["content"].lower()))
-                if len(q_meaningful.intersection(ch_tokens)) >= 1:
-                    matched_chunks.append(ch)
+            elif ch.get("score", 0) >= 0.20 and overlap >= 1:
+                # Moderate vector match with keyword overlap
+                matched_chunks.append(ch)
 
         # Anti-Hallucination Guardrail: If no relevant context matches
         if not matched_chunks:

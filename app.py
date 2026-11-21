@@ -794,19 +794,25 @@ with st.sidebar:
                     }
                     st.session_state.active_link = None
                     st.session_state.active_df = None
-                    res = st.session_state.assistant.rag_engine.ingest_file(
-                        src_file_path=info["path"],
-                        filename=info.get("title", "Web Image"),
-                        gemini_service=st.session_state.assistant.gemini
-                    )
-                    st.session_state.active_doc_id = res.get("doc_id")
+                    try:
+                        res = st.session_state.assistant.rag_engine.ingest_file(
+                            src_file_path=info["path"],
+                            filename=info.get("title", "Web Image"),
+                            gemini_service=st.session_state.assistant.gemini
+                        )
+                        st.session_state.active_doc_id = res.get("doc_id")
+                    except Exception as e:
+                        print(f"[Attach File Ingest Error]: {e}")
                 else:
-                    u_res = st.session_state.assistant.rag_engine.ingest_url(
-                        raw_url,
-                        gemini_service=st.session_state.assistant.gemini
-                    )
-                    doc_id = u_res.get("doc_id")
-                    st.session_state.active_doc_id = doc_id
+                    try:
+                        u_res = st.session_state.assistant.rag_engine.ingest_url(
+                            raw_url,
+                            gemini_service=st.session_state.assistant.gemini
+                        )
+                        doc_id = u_res.get("doc_id")
+                        st.session_state.active_doc_id = doc_id
+                    except Exception as e:
+                        print(f"[Attach URL Ingest Error]: {e}")
                     st.session_state.active_link = info
                     st.session_state.active_file = None
                     st.session_state.active_df = None

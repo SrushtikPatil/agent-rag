@@ -306,7 +306,15 @@ def search_chunks_lexical(query: str, doc_id: Optional[str] = None, limit: int =
     conn = get_connection()
     cursor = conn.cursor()
     
-    tokens = [t.strip().lower() for t in query.split() if len(t.strip()) > 2]
+    STOPWORDS = {
+        "the", "and", "for", "are", "is", "was", "were", "this", "that", "what",
+        "how", "with", "from", "have", "has", "had", "will", "your", "their",
+        "there", "then", "them", "some", "more", "also", "into", "been", "only",
+        "about", "which", "when", "where", "who", "whom", "why", "does", "did", "can"
+    }
+    tokens = [t.strip().lower() for t in query.split() if len(t.strip()) > 2 and t.strip().lower() not in STOPWORDS]
+    if not tokens:
+        tokens = [t.strip().lower() for t in query.split() if len(t.strip()) > 2]
     if not tokens:
         tokens = [query.strip().lower()]
         
