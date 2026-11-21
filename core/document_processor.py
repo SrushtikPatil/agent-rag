@@ -315,7 +315,7 @@ class DocumentProcessor:
                 for m_name in PREFERRED_MODELS:
                     try:
                         model = gemini_service.client.GenerativeModel(m_name)
-                        resp = model.generate_content([instruction, img_obj])
+                        resp = model.generate_content([instruction, img_obj], request_options={"timeout": 45})
                         if resp and resp.text:
                             vision_description = resp.text
                             break
@@ -545,7 +545,73 @@ class DocumentProcessor:
 
         full_content = ""
         if cat == "youtube":
-            full_content = f"YouTube Video: {title}\nChannel: {info.get('author', 'YouTube')}\nURL: {url}\n\n{info.get('title')}"
+            author = info.get("author", "YouTube")
+            transcript = info.get("transcript", "")
+            description = info.get("description", "")
+            
+            chunk_counter = 0
+            if transcript:
+                current_lines = []
+                current_ts = "00:00"
+                for line in transcript.splitlines():
+                    line = line.strip()
+                    if not line:
+                        continue
+                    m = re.match(r'\[(\d{1,2}:\d{2})\]', line)
+                    if not current_lines and m:
+                        current_ts = m.group(1)
+                    current_lines.append(line)
+                    if len(current_lines) >= 8:
+                        c_text = f"YouTube: {title} by {author}\n" + "\n".join(current_lines)
+                        chunk_id = f"{doc_id}_yt_{chunk_counter}"
+                        meta = {
+                            "doc_id": doc_id,
+                            "filename": title,
+                            "file_type": "video",
+                            "source_url": url,
+                            "timestamp_str": current_ts,
+                            "page_number": 1
+                        }
+                        chunks.append(ProcessedChunk(chunk_id, doc_id, chunk_counter, c_text, page_number=1, timestamp_str=current_ts, metadata=meta))
+                        chunk_counter += 1
+                        current_lines = []
+                if current_lines:
+                    c_text = f"YouTube: {title} by {author}\n" + "\n".join(current_lines)
+                    chunk_id = f"{doc_id}_yt_{chunk_counter}"
+                    meta = {
+                        "doc_id": doc_id,
+                        "filename": title,
+                        "file_type": "video",
+                        "source_url": url,
+                        "timestamp_str": current_ts,
+                        "page_number": 1
+                    }
+                    chunks.append(ProcessedChunk(chunk_id, doc_id, chunk_counter, c_text, page_number=1, timestamp_str=current_ts, metadata=meta))
+                    chunk_counter += 1
+
+            if description:
+                for text_chunk in self._chunk_text(description, max_len=850, overlap=100):
+                    chunk_id = f"{doc_id}_yt_desc_{chunk_counter}"
+                    meta = {
+                        "doc_id": doc_id,
+                        "filename": title,
+                        "file_type": "video",
+                        "source_url": url,
+                        "timestamp_str": "00:00",
+                        "page_number": 1
+                    }
+                    chunks.append(ProcessedChunk(chunk_id, doc_id, chunk_counter, f"Video Description: {title}\n{text_chunk}", page_number=1, timestamp_str="00:00", metadata=meta))
+                    chunk_counter += 1
+
+            if not chunks:
+                chunk_id = f"{doc_id}_yt_0"
+                c_text = f"YouTube Video: {title}\nChannel: {author}\nURL: {url}"
+                meta = {"doc_id": doc_id, "filename": title, "file_type": "video", "source_url": url, "page_number": 1}
+                chunks.append(ProcessedChunk(chunk_id, doc_id, 0, c_text, page_number=1, metadata=meta))
+
+            summary_prev = chunks[0].content[:300]
+            return chunks, title, summary_prev
+
         elif cat == "image" and info.get("path"):
             img_chunks, _, prev = self.process_image(info["path"], doc_id, title, gemini_service=gemini_service)
             return img_chunks, title, prev

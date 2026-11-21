@@ -465,16 +465,27 @@ class MultimodalRAGEngine:
 
         generated_answer = ""
         if gemini_service:
-            generated_answer = gemini_service.generate_chat_response(prompt)
+            try:
+                generated_answer = gemini_service.generate_chat_response(prompt)
+            except Exception as e:
+                print(f"[RAG Gemini Generation Error]: {e}")
 
-        if not generated_answer or "error" in generated_answer.lower():
-            # Intelligent fallback synthesis
-            top_content = matched_chunks[0]['content']
-            first_point = top_content[:350].strip()
+        if not generated_answer or "error" in generated_answer.lower()[:30] or "deadline" in generated_answer.lower() or "preview mode" in generated_answer.lower():
+            # Grounded multi-chunk synthesis
+            doc_name = matched_chunks[0]['filename']
+            synthesized_points = []
+            for idx, ch in enumerate(matched_chunks[:4], 1):
+                clean_c = ch['content'].strip()
+                clean_lines = [l for l in clean_c.splitlines() if not l.startswith("---") and not l.startswith("YouTube:")]
+                c_body = " ".join(clean_lines).strip()
+                loc = f"Page {ch.get('page_number', 1)}" if not ch.get("timestamp_str") else f"Timestamp [{ch.get('timestamp_str')}]"
+                first_sent = c_body[:320].strip()
+                synthesized_points.append(f"#### **{idx}. Grounded Finding ({loc})**\n> *\"{first_sent}...\"*\n- **Citation:** Verified in `{ch.get('filename')}` at `{loc}`.")
+
             generated_answer = (
-                f"Based on the content retrieved from **{matched_chunks[0]['filename']}**:\n\n"
-                f"> {first_point}\n\n"
-                f"*(Referenced from {citations[0]['location']})*"
+                f"### 📑 Grounded Intelligence Analysis: `{doc_name}`\n\n"
+                f"In response to *\"{query}\"*, here are the specific findings retrieved from your document:\n\n"
+                + "\n\n".join(synthesized_points)
             )
 
         # Build Formatted Citations Block

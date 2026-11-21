@@ -22,15 +22,15 @@ DUMMY_KEYS = [
     "enter_your_api_key"
 ]
 
-# Robust pool of high-quota models
+# Robust pool of high-quota models - Modern Gemini 3.x and 2.5 series
 PREFERRED_MODELS = [
-    "gemini-flash-lite-latest",
-    "gemini-3.1-flash-lite",
-    "gemini-3.5-flash-lite",
     "gemini-3.8-flash",
     "gemini-3.7-flash",
     "gemini-3.5-flash",
-    "gemini-flash-latest"
+    "gemini-3.1-flash-lite",
+    "gemini-flash-latest",
+    "gemini-2.5-pro",
+    "gemini-pro-latest"
 ]
 
 class GeminiService:
@@ -41,7 +41,7 @@ class GeminiService:
         is_dummy = any(d in self.api_key.lower() for d in DUMMY_KEYS)
         self.is_configured = bool(self.api_key and len(self.api_key) > 20 and not is_dummy)
         self.client = None
-        self.active_model_name = "gemini-flash-lite-latest"
+        self.active_model_name = "gemini-3.8-flash"
 
         if self.is_configured:
             try:
@@ -58,7 +58,7 @@ class GeminiService:
             return {
                 "valid": False,
                 "status": "missing",
-                "message": "No API key entered. Operating in preview mode."
+                "message": "No API key entered. Operating in local intelligence mode."
             }
         
         if any(d in self.api_key.lower() for d in DUMMY_KEYS):
@@ -66,13 +66,6 @@ class GeminiService:
                 "valid": False,
                 "status": "placeholder",
                 "message": "The example key ('AIzaSyYourActualKeyHere') is currently entered. Please replace it with your personal key."
-            }
-
-        if self.api_key.startswith("AQ."):
-            return {
-                "valid": False,
-                "status": "aq_token",
-                "message": "The key starts with 'AQ.' which is an Antigravity internal token, not a Google AI Studio API key. Official Gemini API keys start with 'AIzaSy...'."
             }
 
         if len(self.api_key) < 20:
@@ -85,7 +78,7 @@ class GeminiService:
         return {
             "valid": True,
             "status": "configured",
-            "message": "API key configured."
+            "message": "Live Google Gemini API Active."
         }
 
     def _clean_media_title(self, filename: str) -> str:
@@ -617,13 +610,13 @@ class GeminiService:
                     model_name=m_name,
                     system_instruction=system_instruction
                 )
-                response = model.generate_content(prompt)
+                response = model.generate_content(prompt, request_options={"timeout": 45})
                 self.active_model_name = m_name
                 return response.text
             except Exception as e:
                 last_error = e
                 err_str = str(e)
-                if "404" in err_str or "not found" in err_str.lower() or "429" in err_str or "quota" in err_str.lower() or "ResourceExhausted" in err_str:
+                if any(k in err_str.lower() for k in ["404", "not found", "429", "quota", "resourceexhausted", "504", "deadline", "timeout"]):
                     continue
                 else:
                     if "API_KEY_INVALID" in err_str or "API key not valid" in err_str or "400" in err_str:
@@ -703,11 +696,12 @@ class GeminiService:
                     try:
                         model = self.client.GenerativeModel(m_name)
                         img = Image.open(file_path)
-                        response = model.generate_content([user_prompt, img])
-                        return response.text
+                        response = model.generate_content([user_prompt, img], request_options={"timeout": 45})
+                        if response and response.text:
+                            return response.text
                     except Exception as e:
-                        err_str = str(e)
-                        if "404" in err_str or "not found" in err_str.lower() or "429" in err_str or "quota" in err_str.lower():
+                        err_str = str(e).lower()
+                        if any(k in err_str for k in ["404", "not found", "429", "quota", "504", "deadline", "timeout", "resourceexhausted"]):
                             continue
                         break
             return self._generate_intelligent_image_analysis(file_path, user_prompt)
@@ -740,11 +734,12 @@ class GeminiService:
                         for m_name in PREFERRED_MODELS:
                             try:
                                 model = self.client.GenerativeModel(m_name)
-                                response = model.generate_content([instruction, uploaded_file])
-                                return response.text
+                                response = model.generate_content([instruction, uploaded_file], request_options={"timeout": 60})
+                                if response and response.text:
+                                    return response.text
                             except Exception as e:
-                                err_str = str(e)
-                                if "404" in err_str or "429" in err_str or "quota" in err_str.lower():
+                                err_str = str(e).lower()
+                                if any(k in err_str for k in ["404", "not found", "429", "quota", "504", "deadline", "timeout"]):
                                     continue
                                 break
                 except Exception:

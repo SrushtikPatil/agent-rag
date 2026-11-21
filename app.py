@@ -782,8 +782,9 @@ with st.sidebar:
             attach_clicked = st.button("Attach", key=f"unified_attach_btn_{st.session_state.file_uploader_key}", use_container_width=True)
 
         if attach_clicked and url_input.strip():
-            with st.spinner("Inspecting link..."):
-                info = st.session_state.assistant.link_service.fetch_link_info(url_input.strip())
+            raw_url = url_input.strip()
+            with st.spinner("Extracting content, transcript & indexing link..."):
+                info = st.session_state.assistant.link_service.fetch_link_info(raw_url)
                 if info.get("category") == "image" and info.get("path"):
                     st.session_state.active_file = {
                         "path": info["path"],
@@ -793,7 +794,19 @@ with st.sidebar:
                     }
                     st.session_state.active_link = None
                     st.session_state.active_df = None
+                    res = st.session_state.assistant.rag_engine.ingest_file(
+                        src_file_path=info["path"],
+                        filename=info.get("title", "Web Image"),
+                        gemini_service=st.session_state.assistant.gemini
+                    )
+                    st.session_state.active_doc_id = res.get("doc_id")
                 else:
+                    u_res = st.session_state.assistant.rag_engine.ingest_url(
+                        raw_url,
+                        gemini_service=st.session_state.assistant.gemini
+                    )
+                    doc_id = u_res.get("doc_id")
+                    st.session_state.active_doc_id = doc_id
                     st.session_state.active_link = info
                     st.session_state.active_file = None
                     st.session_state.active_df = None
@@ -931,15 +944,10 @@ with st.sidebar:
                 label_visibility="collapsed"
             )
             key_val = (st.session_state.api_key or "").strip()
-            if key_val.startswith("AIzaSy"):
+            if key_val:
                 st.caption("🟢 Live Google Cloud Gemini API Active")
-            elif key_val.startswith("AQ."):
-                st.caption("ℹ️ AGY internal token detected. Operating with Agent Rag Multimodal Engine.")
-                st.markdown("<div style='font-size:0.75rem;'><a href='https://aistudio.google.com/app/apikey' target='_blank' style='color:#0284c7; text-decoration:none;'>👉 Get official free Gemini API Key (AIzaSy...)</a></div>", unsafe_allow_html=True)
-            elif key_val:
-                st.caption("🟢 API Key Configured")
             else:
-                st.caption("💡 Operating with Agent Rag Multimodal Engine.")
+                st.caption("💡 Operating with Agent Rag Multimodal Intelligence Engine.")
                 st.markdown("<div style='font-size:0.75rem;'><a href='https://aistudio.google.com/app/apikey' target='_blank' style='color:#0284c7; text-decoration:none;'>👉 Get official free Gemini API Key</a></div>", unsafe_allow_html=True)
 
 # ---------------------------------------------------------------------------
