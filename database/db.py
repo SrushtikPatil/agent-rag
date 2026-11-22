@@ -158,7 +158,7 @@ def seed_default_data(conn):
     # Seed Default User
     cursor.execute("""
         INSERT INTO users (user_id, full_name, email, timezone)
-        VALUES ('usr_default', 'Aarav Sharma', 'aarav@example.com', 'Asia/Kolkata')
+        VALUES ('usr_default', 'Srushti Patil', 'srushti@example.com', 'Asia/Kolkata')
     """)
 
     # Seed User Milestones

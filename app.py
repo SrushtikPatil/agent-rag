@@ -35,6 +35,7 @@ importlib.reload(core.agentic_router)
 from database.db import init_db
 from database.models import (
     get_user_profile,
+    update_user_name,
     add_contact_event,
     get_contact_events,
     get_festivals,
@@ -941,6 +942,21 @@ with st.sidebar:
                     st.write(f"• **{c['contact_name']}** ({c['event_type']} {d_str})")
 
         with st.expander("Settings"):
+            st.caption("👤 User Name & Greeting")
+            current_profile = get_user_profile("usr_default")
+            curr_full_name = current_profile["full_name"] if current_profile else "Srushti Patil"
+            new_user_name_val = st.text_input(
+                "Name",
+                value=curr_full_name,
+                key="user_name_input",
+                help="Change the name displayed in greetings and throughout the application."
+            )
+            if new_user_name_val.strip() and new_user_name_val.strip() != curr_full_name:
+                update_user_name(new_user_name_val.strip())
+                st.success(f"Updated name to '{new_user_name_val.strip()}'!")
+                st.rerun()
+
+            st.caption("🔑 Gemini API Key")
             api_key_input = st.text_input(
                 "API Key",
                 type="password",

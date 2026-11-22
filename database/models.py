@@ -15,6 +15,20 @@ def get_user_profile(user_id: str = "usr_default") -> Optional[Dict[str, Any]]:
     conn.close()
     return dict(row) if row else None
 
+def update_user_name(new_name: str, user_id: str = "usr_default") -> bool:
+    """Updates the user's name in persistent storage."""
+    clean_name = new_name.strip()
+    if not clean_name:
+        return False
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("UPDATE users SET full_name = ? WHERE user_id = ?", (clean_name, user_id))
+    if cursor.rowcount == 0:
+        cursor.execute("INSERT OR REPLACE INTO users (user_id, full_name) VALUES (?, ?)", (user_id, clean_name))
+    conn.commit()
+    conn.close()
+    return True
+
 def get_user_milestones_today(user_id: str = "usr_default", month: int = None, day: int = None) -> List[Dict[str, Any]]:
     if month is None or day is None:
         now = datetime.now()
