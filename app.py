@@ -758,9 +758,13 @@ with st.sidebar:
         robot_side = f'<img src="data:image/png;base64,{robot_b64}" width="28" height="28" style="border-radius: 50%; border: 1.5px solid #7dd3fc; vertical-align: middle;">' if robot_b64 else '🤖'
         st.markdown(f'<div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">{robot_side}<span style="font-size: 1.15rem; font-weight: 700; color: #0369a1;">Agent Rag</span></div>', unsafe_allow_html=True)
         
-        # New Chat
+        # New Chat (Clean Slate)
         if st.button("New Chat", key="new_chat_btn", use_container_width=True):
             st.session_state.messages = []
+            st.session_state.active_file = None
+            st.session_state.active_doc_id = None
+            st.session_state.active_link = None
+            st.session_state.active_df = None
             st.rerun()
 
         st.write("")
@@ -883,6 +887,7 @@ with st.sidebar:
             st.caption(f"Active: {icon} **{l_info.get('title', 'Web Link')[:26]}**")
             if st.button("Detach Link", use_container_width=True, key="detach_link_btn"):
                 st.session_state.active_link = None
+                st.session_state.active_doc_id = None
                 st.rerun()
 
         # 4. Clean Sidebar Document Library (Access all uploaded documents without top tabs)
@@ -1216,8 +1221,10 @@ elif st.session_state.get("active_link"):
     l_title = st.session_state.active_link.get('title', 'Web Link')
     short_title = l_title if len(l_title) <= 26 else l_title[:24] + "..."
     chat_placeholder = f"Ask about '{short_title}' or speak with mic..."
+elif st.session_state.get("active_doc_id"):
+    chat_placeholder = "Ask about your targeted document or speak with mic..."
 else:
-    chat_placeholder = "Message Agent Rag, paste a link (YouTube/Web), or speak with mic..."
+    chat_placeholder = "Ask any question, research documents, paste a link (YouTube/Web), or speak with mic..."
 
 chat_val = st.chat_input(chat_placeholder, accept_audio=True)
 

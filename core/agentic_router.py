@@ -84,7 +84,7 @@ class AgenticAssistant:
         if not file_type and not active_doc_id and q_lower in ["hi", "hello", "hey", "hlo", "hii", "who are you"]:
             return "GENERAL_CHAT"
 
-        # Explicit Indian Festival / Calendar triggers (e.g. "when is diwali", "upcoming birthdays")
+        # Explicit personal/calendar triggers
         explicit_personal = [
             "diwali", "holi", "eid", "navratri", "dussehra", "bhai dooj", "dhanteras",
             "birthday", "anniversary", "friend", "rohan", "priya", "how was my day", "yesterday recap",
@@ -100,40 +100,67 @@ class AgenticAssistant:
             "show me the news", "tell me the news", "give me the news", "show news"
         ]
         is_news_intent = any(w in q_lower for w in news_triggers)
-        if is_news_intent and not file_type and not active_doc_id:
-            return "LIVE_NEWS"
-        has_doc_keywords = any(w in q_lower for w in [
-            "summary", "summarize", "document", "video", "audio", "pdf", "file",
-            "attached", "takeaways", "notes", "point", "points", "explain", "important",
-            "what is this", "tell me about", "exam", "concepts", "key", "chapter", "triad", "section"
-        ])
 
-        # If it's a genuine festival/calendar query without referring to a document
-        if is_personal and not has_doc_keywords and not file_type and not active_doc_id:
-            return "PERSONAL_MEMORY"
+        # 1. URL present in query
+        if re.search(r'(https?://[^\s<>"]+|data:image/[a-zA-Z0-9.+_-]+;base64,[a-zA-Z0-9+/=]+)', query):
+            return "LINK_ANALYSIS"
 
-        # -------------------------------------------------------------
-        # IF A DOCUMENT OR FILE IS ATTACHED OR AN ACTIVE DOC IS SELECTED:
-        # The searching bar is ATTACHED TO THE DOCUMENT!
-        # -------------------------------------------------------------
+        # 2. Attached link active in session
+        if attached_link:
+            # If the user asks specifically about an uploaded document, prioritize document RAG
+            doc_explicit = any(w in q_lower for w in ["in the pdf", "in my pdf", "in the document", "in my document", "uploaded file", "upload document"])
+            if not doc_explicit:
+                return "LINK_ANALYSIS"
+
+        # 3. Explicit file attached or active document targeted
         if file_type:
-            if file_type in ["excel", "csv"]:
-                return "STRUCTURED_DATA"
-            else:
-                return "MULTIMODAL_RAG"
+            return "STRUCTURED_DATA" if file_type in ["excel", "csv"] else "MULTIMODAL_RAG"
 
         if active_doc_id:
             return "MULTIMODAL_RAG"
 
-        # Check if indexed ready documents exist in the vector database
-        from database.models import list_documents
-        ready_docs = list_documents(status="Ready")
-        if ready_docs and (has_doc_keywords or not is_personal):
-            return "MULTIMODAL_RAG"
-
-        if is_personal:
+        # 4. Explicit festival / personal memory triggers
+        if is_personal and not file_type and not active_doc_id:
             return "PERSONAL_MEMORY"
 
+        # 5. Explicit Live News triggers
+        if is_news_intent and not file_type and not active_doc_id:
+            return "LIVE_NEWS"
+
+        # 6. Automatic RAG across Indexed Documents
+        # Check if the query specifically refers to documents or matches indexed content with high confidence
+        from database.models import list_documents
+        ready_docs = list_documents(status="Ready")
+        if ready_docs:
+            explicit_doc_terms = [
+                "in the document", "in my document", "in the file", "in my file",
+                "in the pdf", "in my pdf", "according to the document", "from the document",
+                "summarize document", "summarize file", "cia triad", "access control", "database security",
+                "summarize the document", "summarize the file", "summarize this document",
+                "document research", "research document", "from my document", "from my uploaded"
+            ]
+            has_explicit_doc_request = (
+                any(term in q_lower for term in explicit_doc_terms) or
+                (("summarize" in q_lower or "summary" in q_lower or "notes" in q_lower or "key concepts" in q_lower) and
+                 ("document" in q_lower or "file" in q_lower or "pdf" in q_lower))
+            )
+            if has_explicit_doc_request:
+                return "MULTIMODAL_RAG"
+
+            # Check if query has a high-confidence match in ready documents
+            try:
+                candidate_chunks = self.rag_engine.search(query, top_k=2)
+                if candidate_chunks:
+                    best_match = candidate_chunks[0]
+                    # Only auto-route to RAG if there is genuine strong relevance
+                    if best_match.get("source_type") == "lexical" and best_match.get("score", 0) >= 0.50:
+                        return "MULTIMODAL_RAG"
+                    elif best_match.get("score", 0) >= 0.58:
+                        return "MULTIMODAL_RAG"
+            except Exception:
+                pass
+
+        # 7. Default to Universal AI Knowledge & Q&A
         return "GENERAL_CHAT"
 
     def handle_personal_memory(self, query: str, user_id: str, user_name: str) -> str:
@@ -255,8 +282,12 @@ class AgenticAssistant:
                 # Direct multimodal file fallback (if file was attached but not yet indexed)
                 output = self.gemini.analyze_multimodal_file(file_path, file_type, query)
             else:
-                # Grounded anti-hallucination response
-                output = rag_res.get("answer", "I could not find this information in your uploaded documents.")
+                # If no specific document was explicitly selected and RAG returned 0 chunks:
+                if not active_doc_id and not file_path:
+                    output = self.gemini.generate_chat_response(query)
+                else:
+                    # Grounded anti-hallucination response for targeted documents
+                    output = rag_res.get("answer", "I could not find this information in your uploaded documents.")
 
         elif route == "PERSONAL_MEMORY":
             output = self.handle_personal_memory(query, user_id, user_name)

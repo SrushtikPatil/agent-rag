@@ -324,7 +324,9 @@ def search_chunks_lexical(query: str, doc_id: Optional[str] = None, limit: int =
         "the", "and", "for", "are", "is", "was", "were", "this", "that", "what",
         "how", "with", "from", "have", "has", "had", "will", "your", "their",
         "there", "then", "them", "some", "more", "also", "into", "been", "only",
-        "about", "which", "when", "where", "who", "whom", "why", "does", "did", "can"
+        "about", "which", "when", "where", "who", "whom", "why", "does", "did", "can",
+        "explain", "describe", "tell", "give", "show", "help", "write", "find", "list",
+        "simple", "simply", "understand", "detail", "details", "please", "mean", "meaning"
     }
     tokens = [t.strip().lower() for t in query.split() if len(t.strip()) > 2 and t.strip().lower() not in STOPWORDS]
     if not tokens:

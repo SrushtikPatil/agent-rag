@@ -22,31 +22,44 @@ DUMMY_KEYS = [
     "enter_your_api_key"
 ]
 
-# Robust pool of high-quota models - Modern Gemini 3.x and 2.5 series
+# Robust pool of high-quota, fast models
 PREFERRED_MODELS = [
-    "gemini-3.8-flash",
-    "gemini-3.7-flash",
-    "gemini-3.5-flash",
     "gemini-3.1-flash-lite",
-    "gemini-flash-latest",
-    "gemini-2.5-pro",
-    "gemini-pro-latest"
+    "gemini-flash-lite-latest",
+    "gemini-3.5-flash-lite",
+    "gemini-3.8-flash",
+    "gemini-flash-latest"
 ]
 
 class GeminiService:
     def __init__(self, api_key: Optional[str] = None):
+        if not api_key:
+            # Prioritize local .env file so system placeholder variables don't override the configured key
+            env_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), ".env")
+            if os.path.exists(env_path):
+                try:
+                    with open(env_path, "r", encoding="utf-8") as f:
+                        for line in f:
+                            if line.strip().startswith("GEMINI_API_KEY="):
+                                cand = line.strip().split("=", 1)[1].strip()
+                                if cand and not any(d in cand.lower() for d in DUMMY_KEYS):
+                                    api_key = cand
+                                    break
+                except Exception:
+                    pass
+
         raw_key = api_key or os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY") or ""
         self.api_key = raw_key.strip()
 
         is_dummy = any(d in self.api_key.lower() for d in DUMMY_KEYS)
         self.is_configured = bool(self.api_key and len(self.api_key) > 20 and not is_dummy)
         self.client = None
-        self.active_model_name = "gemini-3.8-flash"
+        self.active_model_name = "gemini-3.1-flash-lite"
 
         if self.is_configured:
             try:
                 import google.generativeai as genai
-                genai.configure(api_key=self.api_key)
+                genai.configure(api_key=self.api_key, transport="rest")
                 self.client = genai
             except Exception as e:
                 print(f"[GeminiService] Initialization note: {e}")
@@ -610,7 +623,7 @@ class GeminiService:
                     model_name=m_name,
                     system_instruction=system_instruction
                 )
-                response = model.generate_content(prompt, request_options={"timeout": 45})
+                response = model.generate_content(prompt, request_options={"timeout": 15})
                 self.active_model_name = m_name
                 return response.text
             except Exception as e:
@@ -696,7 +709,7 @@ class GeminiService:
                     try:
                         model = self.client.GenerativeModel(m_name)
                         img = Image.open(file_path)
-                        response = model.generate_content([user_prompt, img], request_options={"timeout": 45})
+                        response = model.generate_content([user_prompt, img], request_options={"timeout": 20})
                         if response and response.text:
                             return response.text
                     except Exception as e:
