@@ -1046,17 +1046,80 @@ if len(st.session_state.messages) == 0:
                         st.session_state.dismissed_birthday_alerts.add(ev_id)
                         st.rerun()
 
+    # -----------------------------------------------------------------------
+    # Real-Time Live News & Updates Dashboard (Front Page)
+    # -----------------------------------------------------------------------
+    st.markdown("""
+    <div style="display: flex; align-items: center; justify-content: space-between; margin-top: 18px; margin-bottom: 8px;">
+        <div style="font-size: 0.96rem; font-weight: 700; color: #0369a1; display: flex; align-items: center; gap: 8px;">
+            <span style="font-size: 1.15rem;">📰</span>
+            <span>Real-Time News & Today's Updates</span>
+            <span style="font-size: 0.72rem; background: #e0f2fe; color: #0284c7; padding: 2px 8px; border-radius: 12px; font-weight: 600;">LIVE</span>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    if "news_cat" not in st.session_state:
+        st.session_state.news_cat = "top"
+
+    n_tab1, n_tab2, n_tab3, n_tab4 = st.columns(4)
+    with n_tab1:
+        if st.button("🔥 Top Stories", key="ncat_top", use_container_width=True, type="primary" if st.session_state.news_cat == "top" else "secondary"):
+            st.session_state.news_cat = "top"
+            st.rerun()
+    with n_tab2:
+        if st.button("💻 Tech & AI", key="ncat_tech", use_container_width=True, type="primary" if st.session_state.news_cat == "tech" else "secondary"):
+            st.session_state.news_cat = "tech"
+            st.rerun()
+    with n_tab3:
+        if st.button("📈 Markets", key="ncat_biz", use_container_width=True, type="primary" if st.session_state.news_cat == "business" else "secondary"):
+            st.session_state.news_cat = "business"
+            st.rerun()
+    with n_tab4:
+        if st.button("🌍 World", key="ncat_world", use_container_width=True, type="primary" if st.session_state.news_cat == "world" else "secondary"):
+            st.session_state.news_cat = "world"
+            st.rerun()
+
+    try:
+        live_news_items = st.session_state.assistant.news_service.fetch_live_news(st.session_state.news_cat, limit=4)
+    except Exception:
+        live_news_items = []
+
+    if live_news_items:
+        row1_col1, row1_col2 = st.columns(2)
+        cols = [row1_col1, row1_col2]
+        for idx, item in enumerate(live_news_items[:4]):
+            col = cols[idx % 2]
+            with col:
+                st.markdown(f"""
+                <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 12px 14px; margin-bottom: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.04);">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                        <span style="font-size: 0.74rem; font-weight: 700; color: #0284c7; background: #f0f9ff; padding: 2px 7px; border-radius: 6px; border: 1px solid #bae6fd;">{item['source']}</span>
+                        <span style="font-size: 0.72rem; color: #64748b; font-weight: 500;">⏱️ {item['time_ago']}</span>
+                    </div>
+                    <div style="font-size: 0.88rem; font-weight: 600; color: #0f172a; line-height: 1.35; margin-bottom: 6px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; height: 38px;">
+                        {item['title']}
+                    </div>
+                </div>
+                """, unsafe_allow_html=True)
+                btn_c1, btn_c2 = st.columns([1.5, 1])
+                with btn_c1:
+                    if st.button("🔍 Analyze Story", key=f"ans_news_{idx}_{item['source'][:4]}", use_container_width=True):
+                        preset_action = f"Analyze this real-time news story in detail from background to today: '{item['title']}' reported by {item['source']}."
+                with btn_c2:
+                    st.markdown(f'<a href="{item["link"]}" target="_blank" style="display: block; text-align: center; font-size: 0.78rem; color: #0284c7; text-decoration: none; padding: 6px 0; border: 1px solid #e0f2fe; border-radius: 8px; background: #f8fafc; font-weight: 500;">Read ↗</a>', unsafe_allow_html=True)
+
     st.write("")
 
     # Refined Starter Chips (Clean, text-only, no clunky emoji buttons)
     st.caption("Suggested Prompts")
     c1, c2, c3 = st.columns(3)
     with c1:
-        if st.button("Diwali wishes for colleagues", key="chip_fest", use_container_width=True):
-            preset_action = "Draft 3 professional and warm Diwali wishes for my colleagues."
+        if st.button("📰 Today's top breaking news", key="chip_news", use_container_width=True):
+            preset_action = "What is today's top breaking news and key global developments?"
     with c2:
-        if st.button("Upcoming birthdays this week", key="chip_bday", use_container_width=True):
-            preset_action = "Who has an upcoming birthday this week and what should I send them?"
+        if st.button("🤖 Latest AI & Tech updates", key="chip_ai_news", use_container_width=True):
+            preset_action = "Provide a chronological overview of recent and today's major AI and technology news."
     with c3:
         if st.button("Explain quantum computing simply", key="chip_ai", use_container_width=True):
             preset_action = "Explain quantum computing in simple terms with a real-world analogy."

@@ -14,6 +14,7 @@ from core.gemini_service import GeminiService
 from core.excel_analyzer import ExcelAnalyzer
 from core.rag_engine import MultimodalRAGEngine
 from core.link_service import LinkService
+from core.news_service import NewsService
 from database.models import (
     get_contact_events,
     get_festivals,
@@ -42,6 +43,7 @@ class AgenticAssistant:
         self.rag_engine = MultimodalRAGEngine()
         self.excel_analyzer = ExcelAnalyzer()
         self.link_service = LinkService()
+        self.news_service = NewsService()
 
     def update_api_key(self, api_key: str):
         """Allows hot-swapping API key from UI."""
@@ -67,6 +69,8 @@ class AgenticAssistant:
             return "LINK_ANALYSIS"
         elif mode == "personal":
             return "PERSONAL_MEMORY"
+        elif mode == "news":
+            return "LIVE_NEWS"
         elif mode == "general":
             return "GENERAL_CHAT"
 
@@ -87,6 +91,17 @@ class AgenticAssistant:
             "calendar", "milestones"
         ]
         is_personal = any(w in q_lower for w in explicit_personal)
+
+        # Explicit Live Real-Time News triggers
+        news_triggers = [
+            "news", "headline", "headlines", "breaking news", "latest news", "today news", "todays news",
+            "current affairs", "world update", "market update", "tech news", "stock market",
+            "what happened today", "updates on", "updates about", "from old to today", "old to todays",
+            "show me the news", "tell me the news", "give me the news", "show news"
+        ]
+        is_news_intent = any(w in q_lower for w in news_triggers)
+        if is_news_intent and not file_type and not active_doc_id:
+            return "LIVE_NEWS"
         has_doc_keywords = any(w in q_lower for w in [
             "summary", "summarize", "document", "video", "audio", "pdf", "file",
             "attached", "takeaways", "notes", "point", "points", "explain", "important",
@@ -245,6 +260,41 @@ class AgenticAssistant:
 
         elif route == "PERSONAL_MEMORY":
             output = self.handle_personal_memory(query, user_id, user_name)
+
+        elif route == "LIVE_NEWS":
+            q_clean = query.strip()
+            general_patterns = [
+                r"^(what('s| is)? )?(the )?(today('s)? )?(latest|breaking|current)? news.*$",
+                r"^show (me )?(the )?(today('s)? )?(latest|breaking|current)? news.*$",
+                r"^tell (me )?(the )?(today('s)? )?(latest|breaking|current)? news.*$",
+                r"^give (me )?(the )?(today('s)? )?(latest|breaking|current)? news.*$",
+                r"^(any )?(latest|breaking|today('s)?) news.*$"
+            ]
+            is_general = any(re.match(pat, q_clean.lower().strip()) for pat in general_patterns)
+
+            clean_topic = q_clean
+            if is_general:
+                sub_match = re.search(r'\b(?:on|about|regarding|for)\s+(.+)$', q_clean, re.IGNORECASE)
+                if sub_match:
+                    clean_topic = sub_match.group(1).strip(" ?.!,:")
+                else:
+                    clean_topic = "Top Breaking News"
+            else:
+                for prefix in [
+                    "does he show me the news also letest", "does it show me the news",
+                    "give me the latest news on", "latest news about", "latest news on",
+                    "news about", "news on", "what is the latest news about", "what is the latest news on",
+                    "show me news about", "show me news on", "today's news on", "todays news on",
+                    "what's the news on", "whats the news on", "news updates on", "news updates about",
+                    "updates on", "updates about"
+                ]:
+                    if prefix in clean_topic.lower():
+                        clean_topic = re.sub(re.escape(prefix), "", clean_topic, flags=re.IGNORECASE).strip()
+                        break
+            clean_topic = clean_topic.strip(" ?.!,:")
+            if not clean_topic or len(clean_topic) < 3:
+                clean_topic = "Top Breaking News"
+            output = self.news_service.synthesize_chronological_news(clean_topic, gemini_service=self.gemini)
 
         else: # GENERAL_CHAT
             clean_q = query.strip().lower().rstrip("!.?,")
