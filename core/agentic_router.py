@@ -338,28 +338,41 @@ class AgenticAssistant:
                 output = "Hello! I am Agent Rag, your personal assistant. How can I help you today?"
             else:
                 system_inst = (
-                    "You are Agent Rag, your personal assistant. You are helpful, articulate, professional, and knowledgeable. "
-                    "Always refer to yourself simply as 'Agent Rag, your personal assistant'. Never use the words 'intelligent' or 'multimodal' in your greeting. "
-                    "If the user greets you or asks who you are, always reply exactly: 'Hello! I am Agent Rag, your personal assistant. How can I help you today?'"
+                    "You are Agent Rag, an expert personal AI assistant. "
+                    "Directly answer the user's question with clarity, accuracy, and professionalism. "
+                    "Do NOT start your answer with greetings or conversational boilerplate like 'Hello! I am Agent Rag, your personal assistant. How can I help you today?'. "
+                    "Jump straight into providing the direct, comprehensive, helpful answer."
                 )
                 output = self.gemini.generate_chat_response(query, system_instruction=system_inst)
-                
-                # Sanitize to guarantee the exact requested phrasing
-                output = output.replace(
-                    "Hello! I am Agent Rag, your intelligent personal multimodal assistant. How can I help you today?",
-                    "Hello! I am Agent Rag, your personal assistant. How can I help you today?"
-                ).replace(
-                    "intelligent personal multimodal assistant",
-                    "personal assistant"
-                ).replace(
-                    "intelligent personal multimodal agentic assistant",
-                    "personal assistant"
-                ).replace(
-                    "personal multimodal assistant",
-                    "personal assistant"
-                )
 
-        # 3. Log interaction to SQLite
+        # 3. Clean repetitive greeting prefixes from non-greeting responses
+        is_direct_greeting = False
+        clean_q_check = query.strip().lower().rstrip("!.?,")
+        all_greetings = [
+            "hi", "hello", "hey", "hlo", "hii", "hiii", "helo", "greeting", "greetings",
+            "hello agent rag", "hi agent rag", "hey agent rag", "who are you", "what is your name",
+            "introduce yourself", "tell me about yourself"
+        ]
+        if clean_q_check in all_greetings:
+            is_direct_greeting = True
+
+        if not is_direct_greeting and isinstance(output, str):
+            prefixes_to_clean = [
+                "Hello! I am Agent Rag, your personal assistant. How can I help you today?",
+                "Hello! I am Agent Rag, your intelligent personal multimodal assistant. How can I help you today?",
+                "Hello! I am Agent Rag, your personal assistant.",
+                "Hello! I'm Agent Rag, your personal assistant.",
+                "Hello! I am Agent Rag.",
+                "Hello, I am Agent Rag.",
+            ]
+            stripped = output.strip()
+            for pfx in prefixes_to_clean:
+                if stripped.lower().startswith(pfx.lower()):
+                    stripped = stripped[len(pfx):].lstrip("\r\n ")
+            if stripped:
+                output = stripped
+
+        # 4. Log interaction to SQLite
         try:
             log_chat_message(user_id, "user", query, route)
             log_chat_message(user_id, "assistant", output, route)

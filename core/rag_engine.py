@@ -561,7 +561,8 @@ class MultimodalRAGEngine:
             "1. Directly and factually answer the user's question using ONLY the provided retrieved context.\n"
             "2. If the answer cannot be determined or inferred from the provided context, state clearly: 'I could not find this information in your uploaded documents.' Do not fabricate details.\n"
             "3. Cite the relevant source name and Page/Timestamp inline where appropriate (e.g. '[Source: filename, Page X]').\n"
-            "4. Format the answer with clear, structured bullet points and bold highlights."
+            "4. Format the answer with clear, structured bullet points and bold highlights.\n"
+            "5. Jump directly into the answer without introductory greetings or conversational filler."
         )
 
         generated_answer = ""
