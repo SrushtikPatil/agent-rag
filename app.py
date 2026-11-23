@@ -3,8 +3,20 @@ Personal Agentic Multi-Modal Assistant
 Executive ChatGPT, Claude & Gemini Professional Interface
 """
 
-import streamlit as st
 import os
+import sys
+
+# Auto-bootstrap Streamlit when executed directly (e.g. from VS Code "Run / Play" button or "python app.py")
+try:
+    from streamlit.runtime import exists as _st_exists
+    if not _st_exists():
+        from streamlit.web import cli as _st_cli
+        sys.argv = ["streamlit", "run", os.path.abspath(__file__)]
+        sys.exit(_st_cli.main())
+except Exception:
+    pass
+
+import streamlit as st
 import tempfile
 import importlib
 import pandas as pd
