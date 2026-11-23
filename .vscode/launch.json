@@ -2,7 +2,7 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Run Agentic RAG Chatbot (F5)",
+            "name": "🚀 1. Run Agentic RAG Chatbot (Streamlit App)",
             "type": "debugpy",
             "request": "launch",
             "module": "streamlit",
@@ -14,6 +14,38 @@
             "jinja": true,
             "justMyCode": false,
             "console": "integratedTerminal"
+        },
+        {
+            "name": "🧪 2. Run All Multimodal Tests (20 Tests)",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/tests/test_multimodal_rag.py",
+            "console": "integratedTerminal",
+            "justMyCode": false
+        },
+        {
+            "name": "🎯 3. Run Router Category Tests (4 Tests)",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/tests/test_router_categories.py",
+            "console": "integratedTerminal",
+            "justMyCode": false
+        },
+        {
+            "name": "🔍 4. Run Live Assistant Verification",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/tests/test_live_assistant_categories.py",
+            "console": "integratedTerminal",
+            "justMyCode": false
+        },
+        {
+            "name": "🐍 5. Python: Run Currently Open File",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${file}",
+            "console": "integratedTerminal",
+            "justMyCode": false
         }
     ]
 }
