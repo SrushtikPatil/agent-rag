@@ -3,20 +3,8 @@ Personal Agentic Multi-Modal Assistant
 Executive ChatGPT, Claude & Gemini Professional Interface
 """
 
-import os
-import sys
-
-# Auto-bootstrap Streamlit when executed directly (e.g. from VS Code "Run / Play" button or "python app.py")
-try:
-    from streamlit.runtime import exists as _st_exists
-    if not _st_exists():
-        from streamlit.web import cli as _st_cli
-        sys.argv = ["streamlit", "run", os.path.abspath(__file__)]
-        sys.exit(_st_cli.main())
-except Exception:
-    pass
-
 import streamlit as st
+import os
 import tempfile
 import importlib
 import pandas as pd
@@ -1160,12 +1148,17 @@ if len(st.session_state.messages) == 0:
 # Active Document Toolbar (Refined, elegant pills)
 if st.session_state.active_file:
     f_info = st.session_state.active_file
+    f_type = f_info.get("type", "document")
+    chip_icon = "🖼️" if f_type == "image" else "🎥" if f_type == "video" else "📄"
     st.markdown(f"""
     <div class="document-chip">
-        <span>📄</span>
+        <span>{chip_icon}</span>
         <span><b>{f_info['name']}</b> ({f_info['size_mb']} MB)</span>
     </div>
     """, unsafe_allow_html=True)
+    if f_type == "image" and os.path.exists(f_info.get("path", "")):
+        with st.expander("🔍 Preview Attached Image", expanded=False):
+            st.image(f_info["path"], caption=f_info["name"], use_container_width=True)
 
     doc_c1, doc_c2, doc_c3, doc_c4 = st.columns(4)
     if doc_c1.button("Summarize", use_container_width=True):
@@ -1299,9 +1292,12 @@ if user_query:
             st.markdown(response)
 
             if route == "MULTIMODAL_RAG":
-                st.markdown("""
+                f_type = f_info.get("type") if f_info else None
+                footnote_icon = "🖼️" if f_type == "image" else "📄"
+                footnote_text = "Analyzed with Multimodal Vision Intelligence" if f_type == "image" else "Referenced from active document"
+                st.markdown(f"""
                 <div class="source-footnote">
-                    <span>📄</span> Referenced from active document
+                    <span>{footnote_icon}</span> {footnote_text}
                 </div>
                 """, unsafe_allow_html=True)
 

@@ -24,9 +24,9 @@ DUMMY_KEYS = [
 
 # Robust pool of high-quota, fast models
 PREFERRED_MODELS = [
-    "gemini-3.1-flash-lite",
-    "gemini-flash-lite-latest",
     "gemini-3.5-flash-lite",
+    "gemini-flash-lite-latest",
+    "gemini-3.1-flash-lite",
     "gemini-3.8-flash",
     "gemini-flash-latest"
 ]
@@ -54,7 +54,7 @@ class GeminiService:
         is_dummy = any(d in self.api_key.lower() for d in DUMMY_KEYS)
         self.is_configured = bool(self.api_key and len(self.api_key) > 20 and not is_dummy)
         self.client = None
-        self.active_model_name = "gemini-3.1-flash-lite"
+        self.active_model_name = "gemini-3.5-flash-lite"
 
         if self.is_configured:
             try:
@@ -705,11 +705,21 @@ class GeminiService:
         # 2. Image Handler
         elif file_type == "image":
             if key_status["valid"] and self.client:
+                image_instruction = (
+                    "You are Agent Rag, an expert multimodal vision AI assistant. "
+                    "Analyze the attached image thoroughly, including all visual elements, text, labels, diagrams, charts, UI elements, and components. "
+                    "Answer the user request with high accuracy, clarity, and structural detail. "
+                    "Do NOT start with repetitive canned greetings like 'Hello! I am Agent Rag'. Jump directly into the answer."
+                )
                 for m_name in PREFERRED_MODELS:
                     try:
-                        model = self.client.GenerativeModel(m_name)
+                        model = self.client.GenerativeModel(
+                            model_name=m_name,
+                            system_instruction=image_instruction
+                        )
                         img = Image.open(file_path)
-                        response = model.generate_content([user_prompt, img], request_options={"timeout": 20})
+                        effective_prompt = user_prompt.strip() if user_prompt and user_prompt.strip() else "Explain this image in full detail, including all text, diagrams, and visual components."
+                        response = model.generate_content([effective_prompt, img], request_options={"timeout": 20})
                         if response and response.text:
                             return response.text
                     except Exception as e:

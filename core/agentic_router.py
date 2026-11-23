@@ -272,22 +272,40 @@ class AgenticAssistant:
                 output = "Please upload an Excel (.xlsx) or CSV file to perform tabular computations."
 
         elif route == "MULTIMODAL_RAG":
-            # Primary: Execute hybrid vector & lexical RAG with strict grounding and citations
-            rag_res = self.rag_engine.answer_rag_query(query, doc_id=active_doc_id, gemini_service=self.gemini)
-            
-            # If RAG found indexed chunks, return the grounded answer with citations
-            if rag_res.get("chunks_used", 0) > 0:
-                output = rag_res["answer"]
-            elif file_path and file_type:
-                # Direct multimodal file fallback (if file was attached but not yet indexed)
-                output = self.gemini.analyze_multimodal_file(file_path, file_type, query)
+            # 1. Direct Multimodal Vision QA (When an image is attached or actively targeted)
+            target_image_path = None
+            if file_type == "image" and file_path and os.path.exists(file_path):
+                target_image_path = file_path
+            elif active_doc_id:
+                try:
+                    from database.models import get_document
+                    doc_rec = get_document(active_doc_id)
+                    if doc_rec and doc_rec.get("file_type") == "image":
+                        sp = doc_rec.get("storage_path")
+                        if sp and os.path.exists(sp):
+                            target_image_path = sp
+                except Exception:
+                    pass
+
+            if target_image_path:
+                output = self.gemini.analyze_multimodal_file(target_image_path, "image", query)
             else:
-                # If no specific document was explicitly selected and RAG returned 0 chunks:
-                if not active_doc_id and not file_path:
-                    output = self.gemini.generate_chat_response(query)
+                # Primary: Execute hybrid vector & lexical RAG with strict grounding and citations
+                rag_res = self.rag_engine.answer_rag_query(query, doc_id=active_doc_id, gemini_service=self.gemini)
+                
+                # If RAG found indexed chunks, return the grounded answer with citations
+                if rag_res.get("chunks_used", 0) > 0:
+                    output = rag_res["answer"]
+                elif file_path and file_type:
+                    # Direct multimodal file fallback (if file was attached but not yet indexed)
+                    output = self.gemini.analyze_multimodal_file(file_path, file_type, query)
                 else:
-                    # Grounded anti-hallucination response for targeted documents
-                    output = rag_res.get("answer", "I could not find this information in your uploaded documents.")
+                    # If no specific document was explicitly selected and RAG returned 0 chunks:
+                    if not active_doc_id and not file_path:
+                        output = self.gemini.generate_chat_response(query)
+                    else:
+                        # Grounded anti-hallucination response for targeted documents
+                        output = rag_res.get("answer", "I could not find this information in your uploaded documents.")
 
         elif route == "PERSONAL_MEMORY":
             output = self.handle_personal_memory(query, user_id, user_name)

@@ -315,7 +315,7 @@ class DocumentProcessor:
                 for m_name in PREFERRED_MODELS:
                     try:
                         model = gemini_service.client.GenerativeModel(m_name)
-                        resp = model.generate_content([instruction, img_obj], request_options={"timeout": 45})
+                        resp = model.generate_content([instruction, img_obj], request_options={"timeout": 15})
                         if resp and resp.text:
                             vision_description = resp.text
                             break
