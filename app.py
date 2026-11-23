@@ -1037,32 +1037,32 @@ if len(st.session_state.messages) == 0:
     st.markdown("""
     <div style="display: flex; align-items: center; justify-content: space-between; margin-top: 18px; margin-bottom: 8px;">
         <div style="font-size: 0.96rem; font-weight: 700; color: #0369a1; display: flex; align-items: center; gap: 8px;">
-            <span style="font-size: 1.15rem;">📰</span>
-            <span>Real-Time News & Today's Updates</span>
-            <span style="font-size: 0.72rem; background: #e0f2fe; color: #0284c7; padding: 2px 8px; border-radius: 12px; font-weight: 600;">LIVE</span>
+            <span style="font-size: 1.15rem;">💻</span>
+            <span>MCA & IT Tech Intelligence Feed</span>
+            <span style="font-size: 0.72rem; background: #e0f2fe; color: #0284c7; padding: 2px 8px; border-radius: 12px; font-weight: 600;">LIVE TECH HUB</span>
         </div>
     </div>
     """, unsafe_allow_html=True)
 
-    if "news_cat" not in st.session_state:
-        st.session_state.news_cat = "top"
+    if "news_cat" not in st.session_state or st.session_state.news_cat not in ["tech", "ai", "cloud", "careers"]:
+        st.session_state.news_cat = "tech"
 
     n_tab1, n_tab2, n_tab3, n_tab4 = st.columns(4)
     with n_tab1:
-        if st.button("🔥 Top Stories", key="ncat_top", use_container_width=True, type="primary" if st.session_state.news_cat == "top" else "secondary"):
-            st.session_state.news_cat = "top"
-            st.rerun()
-    with n_tab2:
-        if st.button("💻 Tech & AI", key="ncat_tech", use_container_width=True, type="primary" if st.session_state.news_cat == "tech" else "secondary"):
+        if st.button("💻 Software & Tech", key="ncat_tech", use_container_width=True, type="primary" if st.session_state.news_cat == "tech" else "secondary"):
             st.session_state.news_cat = "tech"
             st.rerun()
+    with n_tab2:
+        if st.button("🤖 AI & Data Science", key="ncat_ai", use_container_width=True, type="primary" if st.session_state.news_cat == "ai" else "secondary"):
+            st.session_state.news_cat = "ai"
+            st.rerun()
     with n_tab3:
-        if st.button("📈 Markets", key="ncat_biz", use_container_width=True, type="primary" if st.session_state.news_cat == "business" else "secondary"):
-            st.session_state.news_cat = "business"
+        if st.button("🛡️ Cloud & Security", key="ncat_cloud", use_container_width=True, type="primary" if st.session_state.news_cat == "cloud" else "secondary"):
+            st.session_state.news_cat = "cloud"
             st.rerun()
     with n_tab4:
-        if st.button("🌍 World", key="ncat_world", use_container_width=True, type="primary" if st.session_state.news_cat == "world" else "secondary"):
-            st.session_state.news_cat = "world"
+        if st.button("🚀 IT Careers & Jobs", key="ncat_careers", use_container_width=True, type="primary" if st.session_state.news_cat == "careers" else "secondary"):
+            st.session_state.news_cat = "careers"
             st.rerun()
 
     try:
@@ -1090,24 +1090,24 @@ if len(st.session_state.messages) == 0:
                 btn_c1, btn_c2 = st.columns([1.5, 1])
                 with btn_c1:
                     if st.button("🔍 Analyze Story", key=f"ans_news_{idx}_{item['source'][:4]}", use_container_width=True):
-                        preset_action = f"Analyze this real-time news story in detail from background to today: '{item['title']}' reported by {item['source']}."
+                        preset_action = f"Analyze this technology/IT news development in detail, explaining its core architecture, impact on software development, and what an MCA student should know: '{item['title']}' reported by {item['source']}."
                 with btn_c2:
                     st.markdown(f'<a href="{item["link"]}" target="_blank" style="display: block; text-align: center; font-size: 0.78rem; color: #0284c7; text-decoration: none; padding: 6px 0; border: 1px solid #e0f2fe; border-radius: 8px; background: #f8fafc; font-weight: 500;">Read ↗</a>', unsafe_allow_html=True)
 
     st.write("")
 
-    # Refined Starter Chips (Clean, text-only, no clunky emoji buttons)
-    st.caption("Suggested Prompts")
+    # Refined Starter Chips (Clean, text-only, tailored for MCA and Tech Students)
+    st.caption("Suggested MCA Tech Prompts")
     c1, c2, c3 = st.columns(3)
     with c1:
-        if st.button("📰 Today's top breaking news", key="chip_news", use_container_width=True):
-            preset_action = "What is today's top breaking news and key global developments?"
+        if st.button("💻 Latest Software & Tech Trends", key="chip_tech_news", use_container_width=True):
+            preset_action = "What are the most important emerging trends in software engineering, full-stack frameworks, and system architecture today?"
     with c2:
-        if st.button("🤖 Latest AI & Tech updates", key="chip_ai_news", use_container_width=True):
-            preset_action = "Provide a chronological overview of recent and today's major AI and technology news."
+        if st.button("🤖 AI Breakthroughs & LLM Architectures", key="chip_ai_news", use_container_width=True):
+            preset_action = "Explain the latest breakthroughs in Agentic AI, RAG systems, and Large Language Models with real-world examples."
     with c3:
-        if st.button("Explain quantum computing simply", key="chip_ai", use_container_width=True):
-            preset_action = "Explain quantum computing in simple terms with a real-world analogy."
+        if st.button("🚀 MCA Career Guide & Top IT Skills", key="chip_mca_careers", use_container_width=True):
+            preset_action = "As an MCA (Master of Computer Applications) student, what are the top high-paying skills, technical certifications, and interview preparation strategies to secure top software developer roles in 2026?"
 
 # Active Document Toolbar (Refined, elegant pills)
 if st.session_state.active_file:

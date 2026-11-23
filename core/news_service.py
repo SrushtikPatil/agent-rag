@@ -22,16 +22,22 @@ HEADERS = {
 }
 
 CATEGORY_FEEDS = {
-    "top": "https://news.google.com/rss?hl=en-IN&gl=IN&ceid=IN:en",
     "tech": "https://news.google.com/rss/headlines/section/topic/TECHNOLOGY?hl=en-IN&gl=IN&ceid=IN:en",
+    "ai": "https://news.google.com/rss/search?q=Artificial+Intelligence+OR+Machine+Learning+OR+GenAI+when:7d&hl=en-IN&gl=IN&ceid=IN:en",
+    "cloud": "https://news.google.com/rss/search?q=Cybersecurity+OR+Cloud+Computing+OR+DevOps+when:7d&hl=en-IN&gl=IN&ceid=IN:en",
+    "careers": "https://news.google.com/rss/search?q=IT+hiring+OR+software+engineer+jobs+OR+tech+skills+when:7d&hl=en-IN&gl=IN&ceid=IN:en",
+    "top": "https://news.google.com/rss/headlines/section/topic/TECHNOLOGY?hl=en-IN&gl=IN&ceid=IN:en",
     "business": "https://news.google.com/rss/headlines/section/topic/BUSINESS?hl=en-IN&gl=IN&ceid=IN:en",
     "world": "https://news.google.com/rss/headlines/section/topic/WORLD?hl=en-IN&gl=IN&ceid=IN:en",
     "science": "https://news.google.com/rss/headlines/section/topic/SCIENCE?hl=en-IN&gl=IN&ceid=IN:en"
 }
 
 FALLBACK_FEEDS = {
-    "world": "https://feeds.bbci.co.uk/news/world/rss.xml",
     "tech": "https://feeds.bbci.co.uk/news/technology/rss.xml",
+    "ai": "https://feeds.bbci.co.uk/news/technology/rss.xml",
+    "cloud": "https://feeds.bbci.co.uk/news/technology/rss.xml",
+    "careers": "https://feeds.bbci.co.uk/news/technology/rss.xml",
+    "world": "https://feeds.bbci.co.uk/news/world/rss.xml",
     "business": "https://feeds.bbci.co.uk/news/business/rss.xml"
 }
 
