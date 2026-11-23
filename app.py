@@ -406,7 +406,7 @@ st.markdown("""
         line-height: 1.5 !important;
         padding-top: 14px !important;
         padding-bottom: 14px !important;
-        padding-left: 54px !important;
+        padding-left: 96px !important;
         padding-right: 54px !important;
         text-decoration: none !important;
         -webkit-text-decorations-in-effect: none !important;
@@ -419,21 +419,85 @@ st.markdown("""
         color: #94a3b8 !important;
     }
 
-    /* Completely Remove Any Red Background, Red Borders, or Box Wrappers from Chat Input and Microphone */
+    /* Completely Remove Any Red Background, Red Borders, or Box Wrappers from Chat Input, Attachment Pin, and Microphone */
     div[data-testid="stChatInput"] [data-testid="stTooltipErrorHoverTarget"],
     div[data-testid="stChatInput"] .stTooltipErrorHoverTarget,
     div[data-testid="stChatInput"] div:has(button[data-testid="stChatInputMicButton"]),
-    div[data-testid="stChatInput"] div:has([data-testid="stChatInputMicButton"]) {
+    div[data-testid="stChatInput"] div:has([data-testid="stChatInputMicButton"]),
+    div[data-testid="stChatInput"] div:has([data-testid="stChatInputFileUploadButton"]),
+    div[data-testid="stChatInput"] div:has(button[aria-label*="Upload"]) {
         background: transparent !important;
         background-color: transparent !important;
         border: none !important;
         box-shadow: none !important;
     }
 
-    /* Executive Real Microphone Symbol in Classic Blue Color - Centered Vertically on Left */
-    div[data-testid="stChatInput"] button[data-testid="stChatInputMicButton"] {
+    /* Executive Attached Pin Symbol (Paperclip) in Classic Blue Color - Centered Vertically on Left at 14px */
+    div[data-testid="stChatInput"] [data-testid="stChatInputFileUploadButton"],
+    div[data-testid="stChatInput"] div:has(> button[aria-label*="Upload"]),
+    div[data-testid="stChatInput"] div:has(> button[data-testid="stChatInputFileUploadButton"]) {
         position: absolute !important;
         left: 14px !important;
+        top: 50% !important;
+        transform: translateY(-50%) !important;
+        bottom: auto !important;
+        z-index: 25 !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        background: transparent !important;
+        background-color: transparent !important;
+        border: none !important;
+        box-shadow: none !important;
+        outline: none !important;
+        width: 36px !important;
+        height: 36px !important;
+        min-width: 36px !important;
+        min-height: 36px !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        cursor: pointer !important;
+    }
+
+    div[data-testid="stChatInput"] [data-testid="stChatInputFileUploadButton"] button,
+    div[data-testid="stChatInput"] button[aria-label*="Upload"] {
+        position: relative !important;
+        background: transparent !important;
+        background-color: transparent !important;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' width='22' height='22' fill='none' stroke='%230284c7' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48'/%3E%3C/svg%3E") !important;
+        background-repeat: no-repeat !important;
+        background-position: center !important;
+        background-size: 22px 22px !important;
+        border: none !important;
+        box-shadow: none !important;
+        outline: none !important;
+        width: 36px !important;
+        height: 36px !important;
+        cursor: pointer !important;
+        transition: transform 0.15s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    }
+
+    div[data-testid="stChatInput"] [data-testid="stChatInputFileUploadButton"] button:hover,
+    div[data-testid="stChatInput"] button[aria-label*="Upload"]:hover {
+        background-color: transparent !important;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' width='22' height='22' fill='none' stroke='%230369a1' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48'/%3E%3C/svg%3E") !important;
+        transform: scale(1.15) !important;
+    }
+
+    /* Completely hide internal children/svgs in upload button so only our attached pin SVG is shown */
+    div[data-testid="stChatInput"] [data-testid="stChatInputFileUploadButton"] button > *,
+    div[data-testid="stChatInput"] [data-testid="stChatInputFileUploadButton"] svg,
+    div[data-testid="stChatInput"] button[aria-label*="Upload"] > * {
+        display: none !important;
+        visibility: hidden !important;
+        opacity: 0 !important;
+        pointer-events: none !important;
+    }
+
+    /* Executive Real Microphone Symbol in Classic Blue Color - Centered Vertically on Left at 54px (Before Text, After Pin) */
+    div[data-testid="stChatInput"] button[data-testid="stChatInputMicButton"] {
+        position: absolute !important;
+        left: 54px !important;
         top: 50% !important;
         transform: translateY(-50%) !important;
         bottom: auto !important;
@@ -1216,8 +1280,27 @@ for msg in st.session_state.messages:
             """, unsafe_allow_html=True)
 
 # ---------------------------------------------------------------------------
-# Integrated Bottom Chat Input (With Built-in Mic on Left Side)
+# Integrated Bottom Chat Input (With Attached Pin, Built-in Mic, and Quick Link Bar)
 # ---------------------------------------------------------------------------
+if not st.session_state.active_file and not st.session_state.get("active_link"):
+    bar_c1, bar_c2 = st.columns([1.6, 3])
+    with bar_c1:
+        with st.popover("🔗 Paste YouTube / Web Link", use_container_width=True):
+            st.markdown("**Paste Web or YouTube Link**")
+            pasted_link = st.text_input("URL", placeholder="https://youtube.com/watch?v=... or https://...", label_visibility="collapsed", key="popover_link_box")
+            if st.button("Attach Link", key="popover_link_btn", use_container_width=True):
+                if pasted_link:
+                    with st.spinner("Fetching link details..."):
+                        info = st.session_state.assistant.link_service.fetch_link_info(pasted_link.strip())
+                        if info.get("status") == "success":
+                            st.session_state.active_link = info
+                            st.session_state.active_file = None
+                            st.session_state.active_doc_id = None
+                            st.session_state.active_df = None
+                            st.rerun()
+                        else:
+                            st.error("Could not fetch link.")
+
 if st.session_state.active_file:
     f_name = st.session_state.active_file['name']
     short_name = f_name if len(f_name) <= 26 else f_name[:24] + "..."
@@ -1229,30 +1312,79 @@ elif st.session_state.get("active_link"):
 elif st.session_state.get("active_doc_id"):
     chat_placeholder = "Ask about your targeted document or speak with mic..."
 else:
-    chat_placeholder = "Ask any question, research documents, paste a link (YouTube/Web), or speak with mic..."
+    chat_placeholder = "Ask any question, attach document/image via 📎 pin, or paste a link..."
 
-chat_val = st.chat_input(chat_placeholder, accept_audio=True)
+chat_val = st.chat_input(
+    chat_placeholder,
+    accept_file=True,
+    file_type=["pdf", "xlsx", "csv", "png", "jpg", "jpeg", "webp", "bmp", "gif", "svg", "jfif", "tiff", "ico", "mp3", "wav", "mp4", "docx", "txt", "pptx"],
+    accept_audio=True
+)
 
 user_query = None
 is_voice = False
 
 if chat_val:
-    if isinstance(chat_val, str):
-        user_query = chat_val.strip()
-    elif hasattr(chat_val, "get"):
-        audio_file = chat_val.get("audio")
-        text_val = chat_val.get("text")
-        if audio_file is not None:
-            raw_audio_bytes = audio_file.read()
-            with st.spinner("🎧 Transcribing your voice..."):
-                transcribed_text = st.session_state.assistant.gemini.transcribe_audio_bytes(raw_audio_bytes)
-                if transcribed_text:
-                    user_query = transcribed_text
-                    is_voice = True
-                else:
-                    st.warning("Could not detect clear speech. Please speak closer to the microphone and try again!")
-        elif text_val:
-            user_query = text_val.strip()
+    # 1. Process files uploaded directly via the attached pin icon in search bar
+    uploaded_files = getattr(chat_val, "files", None) or (chat_val.get("files") if hasattr(chat_val, "get") else None)
+    if uploaded_files:
+        uf = uploaded_files[0] if isinstance(uploaded_files, list) else uploaded_files
+        file_ext = uf.name.split(".")[-1].lower()
+        image_exts = ["png", "jpg", "jpeg", "webp", "bmp", "gif", "svg", "jfif", "tiff", "ico"]
+        cat = "image" if file_ext in image_exts else \
+              "audio" if file_ext in ["mp3", "wav"] else \
+              "video" if file_ext in ["mp4", "mov"] else \
+              "excel" if file_ext in ["xlsx", "csv"] else \
+              "pdf" if file_ext == "pdf" else "text"
+
+        temp_dir = tempfile.gettempdir()
+        temp_path = os.path.join(temp_dir, uf.name)
+        with open(temp_path, "wb") as f_out:
+            f_out.write(uf.getbuffer())
+
+        with st.spinner(f"Indexing {uf.name}..."):
+            res = st.session_state.assistant.rag_engine.ingest_file(
+                src_file_path=temp_path,
+                filename=uf.name,
+                gemini_service=st.session_state.assistant.gemini
+            )
+            doc_id = res.get("doc_id")
+
+        st.session_state.active_doc_id = doc_id
+        st.session_state.active_file = {
+            "path": temp_path,
+            "type": cat,
+            "name": uf.name,
+            "size_mb": round(uf.size / (1024 * 1024), 2)
+        }
+        st.session_state.active_link = None
+        if cat == "excel":
+            try:
+                st.session_state.active_df = pd.read_csv(temp_path) if file_ext == "csv" else pd.read_excel(temp_path)
+            except Exception:
+                pass
+
+    # 2. Extract user query text or audio
+    text_val = (chat_val.text if hasattr(chat_val, "text") else chat_val.get("text")) if hasattr(chat_val, "get") else (chat_val if isinstance(chat_val, str) else "")
+    audio_file = (chat_val.audio if hasattr(chat_val, "audio") else chat_val.get("audio")) if hasattr(chat_val, "get") else None
+
+    if audio_file is not None:
+        raw_audio_bytes = audio_file.read()
+        with st.spinner("🎧 Transcribing your voice..."):
+            transcribed_text = st.session_state.assistant.gemini.transcribe_audio_bytes(raw_audio_bytes)
+            if transcribed_text:
+                user_query = transcribed_text
+                is_voice = True
+            else:
+                st.warning("Could not detect clear speech. Please speak closer to the microphone and try again!")
+    elif text_val and text_val.strip():
+        user_query = text_val.strip()
+    elif uploaded_files:
+        f_name = uploaded_files[0].name if isinstance(uploaded_files, list) else uploaded_files.name
+        if cat == "image":
+            user_query = f"Provide a comprehensive visual analysis and explanation of '{f_name}'."
+        else:
+            user_query = f"Provide a comprehensive summary and key takeaways of '{f_name}'."
 elif preset_action:
     user_query = preset_action.strip()
 
